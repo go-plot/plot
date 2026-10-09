@@ -12,14 +12,18 @@ import (
 )
 
 // Values converts plot data to []float64. It accepts []float64, []float32,
-// []int, []int64, []int32, any *ndarray.Array (of any dtype, flattened in row-major order;
-// complex values keep their real part, as NumPy's astype does) and nil
-// (which gives nil). Anything else panics: passing a type a plot cannot draw
+// []int, []int64, []int32, a single float64 or int, any *ndarray.Array (of
+// any dtype, flattened in row-major order; complex values keep their real
+// part, as NumPy's astype does) and nil (which gives nil). Anything else panics: passing a type a plot cannot draw
 // is a programming error, like an index out of range.
 func Values(v any) []float64 {
 	switch d := v.(type) {
 	case nil:
 		return nil
+	case float64:
+		return []float64{d}
+	case int:
+		return []float64{float64(d)}
 	case []float64:
 		return d
 	case []float32:

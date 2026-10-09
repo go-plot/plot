@@ -50,8 +50,8 @@ func (d *Default) mathDefault(s string, sizePx float64) (Layout, bool) {
 		r := d.setText(text, size, pen, shift)
 		out.Path.Append(r.path, render.Identity)
 		if r.hasInk {
-			out.Ascent = math.Max(out.Ascent, -(r.inkTop))
-			out.Descent = math.Max(out.Descent, r.inkBottom)
+			out.Ascent = math.Max(out.Ascent, -(r.inkTop + shift))
+			out.Descent = math.Max(out.Descent, r.inkBottom+shift)
 		}
 		pen += r.advance
 	}

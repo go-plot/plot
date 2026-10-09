@@ -20,6 +20,7 @@ type contourArt struct {
 	levels []float64
 	filled bool
 	cols   []colors.RGBA // per level (lines) or per band (filled)
+	dashed []bool        // per level: negative levels of one-colour lines
 	lw     float64
 	z      float64
 	label  string
@@ -74,7 +75,13 @@ func (c *contourArt) draw(a *Axes, r render.Renderer) {
 		if len(pts) == 0 {
 			continue
 		}
-		r.DrawPath(polylinePath(pts), render.Style{Stroke: c.cols[k], Width: a.fig.pt(c.lw), Join: render.JoinRound, Cap: render.CapButt})
+		ls := lineStyle{color: c.cols[k], width: c.lw, dash: "-"}
+		if c.dashed[k] {
+			ls.dash = "--"
+		}
+		st := ls.stroke(a.fig)
+		st.Cap = render.CapButt
+		r.DrawPath(polylinePath(pts), st)
 	}
 }
 
@@ -166,6 +173,12 @@ func (a *Axes) contour(x, y, z any, filled bool, opts []Option) *Mappable {
 	}
 	if filled {
 		m.boundaries, m.values = levels, values
+	}
+	// One-colour line contours draw negative levels dashed, as matplotlib's
+	// contour.negative_linestyle.
+	c.dashed = make([]bool, len(levels))
+	for i, lv := range levels {
+		c.dashed[i] = !filled && p.setColor && lv < -(zmax-zmin)*1e-15
 	}
 	a.add(c)
 	return m

@@ -86,7 +86,13 @@ func NewDefault() *Default {
 			upem:   float64(f.UnitsPerEm()),
 			tex:    tex,
 			glyphs: map[opentype.GlyphIndex]glyph{},
-			xh:     float64(f.XHeight()),
+		}
+		// matplotlib's x-height is the height of the ink of "x".
+		gid, _ := f.GlyphIndex('x')
+		for _, sg := range d.glyph(gid).segs {
+			for _, p := range sg.P {
+				d.xh = math.Max(d.xh, p.Y)
+			}
 		}
 		// matplotlib reads the line metrics from the OS/2 table.
 		os2, _ := f.Table("OS/2")
