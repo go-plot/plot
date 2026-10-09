@@ -102,18 +102,29 @@ func (r *Raster) DrawPath(p *Path, s Style) {
 			r.composite(cov, ox, oy, cw, ch, s.Fill.Bytes())
 		}
 	}
-	if stroke {
-		st := vector.StrokeStyle{
-			Width:     s.Width,
-			Cap:       [...]vector.LineCap{vector.ButtCap, vector.RoundCap, vector.SquareCap}[s.Cap],
-			Join:      [...]vector.LineJoin{vector.MiterJoin, vector.RoundJoin, vector.BevelJoin}[s.Join],
-			Dash:      s.Dash,
-			DashPhase: s.Offset,
-		}
-		cov, ox, oy, cw, ch, ok := r.rz.StrokeWith(toVector(p), st, w, h)
-		if ok {
-			r.composite(cov, ox, oy, cw, ch, s.Stroke.Bytes())
-		}
+	if !stroke {
+		return
+	}
+	if len(s.Dash) == 0 && len(p.Segs) > strokeChunk {
+		r.strokeChunked(p, s)
+		return
+	}
+	r.stroke(p, s)
+}
+
+// stroke rasterises the outline of p and paints it.
+func (r *Raster) stroke(p *Path, s Style) {
+	w, h := r.Size()
+	st := vector.StrokeStyle{
+		Width:     s.Width,
+		Cap:       [...]vector.LineCap{vector.ButtCap, vector.RoundCap, vector.SquareCap}[s.Cap],
+		Join:      [...]vector.LineJoin{vector.MiterJoin, vector.RoundJoin, vector.BevelJoin}[s.Join],
+		Dash:      s.Dash,
+		DashPhase: s.Offset,
+	}
+	cov, ox, oy, cw, ch, ok := r.rz.StrokeWith(toVector(p), st, w, h)
+	if ok {
+		r.composite(cov, ox, oy, cw, ch, s.Stroke.Bytes())
 	}
 }
 
@@ -144,4 +155,37 @@ func (r *Raster) DrawImage(im Image) {
 		}
 	}
 	r.p.DrawImage(painter.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}, pix, sw, sh)
+}
+
+// strokeChunk is how many segments a stroke is rasterised in at once. The
+// coverage sweep sorts the crossings of each scanline by insertion, which
+// grows with the square of the segments crossing it: a dense polyline of a
+// hundred thousand segments costs seconds in one piece and milliseconds in
+// pieces, as matplotlib's agg.path.chunksize does it. The pieces share their
+// end vertex and are drawn with round caps so that they meet in the round
+// join they would have had; the line's own two ends are round too, which is
+// the one visible difference, and only for a line this long.
+const strokeChunk = 512
+
+// strokeChunked strokes a long, solid path in pieces of strokeChunk segments.
+func (r *Raster) strokeChunked(p *Path, s Style) {
+	s.Cap = CapRound
+	var cur Path
+	var last Pt
+	for _, sg := range p.Segs {
+		switch {
+		case sg.Op == MoveTo:
+			r.stroke(&cur, s)
+			cur.Segs = cur.Segs[:0]
+		case len(cur.Segs) >= strokeChunk:
+			r.stroke(&cur, s)
+			cur.Segs = cur.Segs[:0]
+			cur.MoveTo(last.X, last.Y)
+		}
+		cur.Segs = append(cur.Segs, sg)
+		if n := sg.Op.points(); n > 0 {
+			last = sg.P[n-1]
+		}
+	}
+	r.stroke(&cur, s)
 }

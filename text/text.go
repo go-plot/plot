@@ -46,16 +46,17 @@ type Renderer interface {
 
 // Default is the built-in Renderer: DejaVu Sans for text, go-tex/math for TeX.
 type Default struct {
-	font   *opentype.Font
-	face   *opentype.Face
-	upem   float64
-	asc    float64 // OS/2 sTypoAscender, font units
-	desc   float64 // -sTypoDescender
-	gap    float64
-	xh     float64 // x-height, font units
-	tex    *texmath.Renderer
-	mu     sync.Mutex
-	glyphs map[opentype.GlyphIndex]glyph
+	font    *opentype.Font
+	face    *opentype.Face
+	upem    float64
+	asc     float64 // OS/2 sTypoAscender, font units
+	desc    float64 // -sTypoDescender
+	gap     float64
+	xh      float64 // x-height, font units
+	texOnce sync.Once
+	tex     *texmath.Renderer
+	mu      sync.Mutex
+	glyphs  map[opentype.GlyphIndex]glyph
 }
 
 type glyph struct {
@@ -76,15 +77,10 @@ func NewDefault() *Default {
 		if err != nil {
 			panic("text: embedded DejaVu Sans does not parse: " + err.Error())
 		}
-		tex, err := texmath.New(texmath.DefaultFont())
-		if err != nil {
-			panic("text: embedded math font does not load: " + err.Error())
-		}
 		d := &Default{
 			font:   f,
 			face:   f.NewFace(f.UnitsPerEm()),
 			upem:   float64(f.UnitsPerEm()),
-			tex:    tex,
 			glyphs: map[opentype.GlyphIndex]glyph{},
 		}
 		// matplotlib's x-height is the height of the ink of "x".
@@ -102,6 +98,19 @@ func NewDefault() *Default {
 		defaultR = d
 	})
 	return defaultR
+}
+
+// texRenderer returns the TeX typesetter, loading its font (STIX Two Math)
+// the first time a label needs it.
+func (d *Default) texRenderer() *texmath.Renderer {
+	d.texOnce.Do(func() {
+		tex, err := texmath.New(texmath.DefaultFont())
+		if err != nil {
+			panic("text: embedded math font does not load: " + err.Error())
+		}
+		d.tex = tex
+	})
+	return d.tex
 }
 
 // LineMetrics implements Renderer.

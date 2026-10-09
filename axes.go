@@ -32,6 +32,7 @@ type Axes struct {
 	xHidden   bool // a twin's x axis is drawn by its parent
 	frameOff  bool // patch (background) not drawn: twins
 	artists   []artist
+	lims      []lim // artists[i].limits(), computed once when added
 	title     string
 	legend    *legendSpec
 	gridX     bool
@@ -177,28 +178,43 @@ func emptyLim() lim {
 	return lim{x0: inf, x1: -inf, y0: inf, y1: -inf, minPosX: inf, minPosY: inf}
 }
 
+// finite reports whether v is neither NaN nor infinite (v-v is 0 only then).
+func finite(v float64) bool { return v-v == 0 }
+
+// The comparisons below are plain ones, not math.Min: the values are known
+// finite, and a million points go through here.
 func (l *lim) addX(v float64) {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
+	if !finite(v) {
 		return
 	}
-	l.x0, l.x1 = math.Min(l.x0, v), math.Max(l.x1, v)
-	if v > 0 {
-		l.minPosX = math.Min(l.minPosX, v)
+	if v < l.x0 {
+		l.x0 = v
+	}
+	if v > l.x1 {
+		l.x1 = v
+	}
+	if v > 0 && v < l.minPosX {
+		l.minPosX = v
 	}
 }
 
 func (l *lim) addY(v float64) {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
+	if !finite(v) {
 		return
 	}
-	l.y0, l.y1 = math.Min(l.y0, v), math.Max(l.y1, v)
-	if v > 0 {
-		l.minPosY = math.Min(l.minPosY, v)
+	if v < l.y0 {
+		l.y0 = v
+	}
+	if v > l.y1 {
+		l.y1 = v
+	}
+	if v > 0 && v < l.minPosY {
+		l.minPosY = v
 	}
 }
 
 func (l *lim) addXY(x, y float64) {
-	if math.IsNaN(x) || math.IsNaN(y) || math.IsInf(x, 0) || math.IsInf(y, 0) {
+	if !finite(x) || !finite(y) {
 		return
 	}
 	l.addX(x)
@@ -210,8 +226,7 @@ func (l *lim) addXY(x, y float64) {
 func (ax *axis) minPos() float64 {
 	m := math.Inf(1)
 	for _, o := range ax.owners {
-		for _, art := range o.artists {
-			l := art.limits()
+		for _, l := range o.lims {
 			if ax.name == 'x' {
 				m = math.Min(m, l.minPosX)
 			} else {
@@ -256,8 +271,8 @@ func (ax *axis) autoscale() {
 	lo, hi := math.Inf(1), math.Inf(-1)
 	var stickies []float64
 	for _, o := range ax.owners {
-		for _, art := range o.artists {
-			l := art.limits()
+		for i, art := range o.artists {
+			l := o.lims[i]
 			if ax.name == 'x' {
 				lo, hi = math.Min(lo, l.x0), math.Max(hi, l.x1)
 			} else {
@@ -488,8 +503,13 @@ func (a *Axes) draw(r render.Renderer, n int) {
 	r.EndGroup()
 }
 
-// add appends an artist.
-func (a *Axes) add(art artist) { a.artists = append(a.artists, art) }
+// add appends an artist. Its data limits are taken now: data given to a
+// plot does not change afterwards, and a million points are not walked
+// once per axis per draw.
+func (a *Axes) add(art artist) {
+	a.artists = append(a.artists, art)
+	a.lims = append(a.lims, art.limits())
+}
 
 // clipToAxes pushes the Axes box as the clip.
 func (a *Axes) clipToAxes(r render.Renderer) {

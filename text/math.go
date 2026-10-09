@@ -25,7 +25,7 @@ func (d *Default) math(tex string, sizePx float64) (Layout, float64) {
 		}
 	}
 	src := strings.ReplaceAll(tex, `\mathdefault{`, `{`)
-	svg, m, err := d.tex.RenderSVGMetrics(src, texSize)
+	svg, m, err := d.texRenderer().RenderSVGMetrics(src, texSize)
 	if err != nil {
 		// matplotlib would refuse the whole figure; showing the source is
 		// more useful than failing a render.
