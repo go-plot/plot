@@ -31,14 +31,13 @@ def main():
             out.append("\t\t{%s, %s, %s, %s}," % tuple(repr(float(v)) for v in r))
         out.append("\t},")
     out.append("}\n")
-    out.append("// namedData maps every colour name matplotlib knows (base, tab: and CSS4)")
-    out.append("// to its hex value.")
+    out.append("// namedData maps the tab: and CSS4 colour names to their hex values. The")
+    out.append("// single-letter base colours are not hex values (g is 0.5 green, not")
+    out.append("// 128/255) and live in colors.go.")
     out.append("var namedData = map[string]string{")
     allnames = {}
     for table in (matplotlib.colors.CSS4_COLORS, matplotlib.colors.TABLEAU_COLORS):
         allnames.update(table)
-    for k, v in matplotlib.colors.BASE_COLORS.items():
-        allnames[k] = matplotlib.colors.to_hex(v)
     for k in sorted(allnames):
         out.append("\t\"%s\": \"%s\"," % (k, allnames[k].lower()))
     out.append("}\n")
