@@ -72,15 +72,8 @@ func (colorbarOutline) draw(a *Axes, r render.Renderer) {
 // bar 20 times as tall as wide, ticks on the right. It returns the
 // colorbar's Axes, whose y label can be set.
 func (f *Figure) Colorbar(m *Mappable, ax *Axes) *Axes {
-	const fraction, pad, aspect = 0.15, 0.05, 20.0
-	pb := ax.pos
-	// pb.splitx(1 - fraction - pad, 1 - fraction)
-	x1 := pb.x + (1-fraction-pad)*pb.w
-	x2 := pb.x + (1-fraction)*pb.w
-	ax.pos = rect{pb.x, pb.y, x1 - pb.x, pb.h}
-	ax.anchor = [2]float64{1, 0.5}
-	cax := f.AddAxes(x2, pb.y, pb.x+pb.w-x2, pb.h)
-	cax.boxAspect = aspect
+	cax := f.AddAxes(0, 0, 1, 1)
+	cax.boxAspect = colorbarAspect
 	cax.anchor = [2]float64{0, 0.5}
 	cax.colorbar = &colorbarSpec{m: m}
 	cax.xHidden = true
@@ -93,5 +86,21 @@ func (f *Figure) Colorbar(m *Mappable, ax *Axes) *Axes {
 	}
 	cax.add(&colorbarArt{m: m})
 	cax.add(colorbarOutline{})
+	ax.cbar = cax
+	ax.splitForColorbar(ax.pos)
 	return cax
+}
+
+// colorbar geometry: matplotlib's make_axes defaults.
+const colorbarFraction, colorbarPad, colorbarAspect = 0.15, 0.05, 20.0
+
+// splitForColorbar places the Axes and its colorbar in the rectangle pb,
+// as matplotlib's make_axes splits it: the bar takes 15% of the width
+// after a 5% gap, the Axes the rest, anchored against the bar.
+func (a *Axes) splitForColorbar(pb rect) {
+	x1 := pb.x + (1-colorbarFraction-colorbarPad)*pb.w
+	x2 := pb.x + (1-colorbarFraction)*pb.w
+	a.pos = rect{pb.x, pb.y, x1 - pb.x, pb.h}
+	a.anchor = [2]float64{1, 0.5}
+	a.cbar.pos = rect{x2, pb.y, pb.x + pb.w - x2, pb.h}
 }

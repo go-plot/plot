@@ -26,9 +26,12 @@ import (
 // Layout is a laid-out line of text. Path holds the glyph outlines in pixels
 // with the pen origin at (0, 0) on the baseline and y pointing down.
 //
-// Width, Ascent and Descent are the metrics matplotlib aligns text by: for
-// plain text, the extent of the ink (the glyphs' control boxes), with the
-// width measured from the left of the ink; for math, the TeX box.
+// Width, Ascent and Descent are the metrics matplotlib aligns text by. The
+// box starts at the pen origin. For plain text the width is the advance of
+// the string (kerned), which is what FreeType's bounding box of the
+// rendered string comes to in matplotlib within a pixel or two (matplotlib's
+// is hinted, each glyph a whole number of pixels); the ascent and descent
+// are those of the ink. For math, the TeX box.
 type Layout struct {
 	Path    *render.Path
 	Width   float64
@@ -197,7 +200,7 @@ func (d *Default) Layout(s string, sizePx float64) Layout {
 		r := d.setText(s, sizePx, 0, 0)
 		return Layout{
 			Path:    r.path,
-			Width:   r.inkX1 - r.inkX0,
+			Width:   r.advance,
 			Ascent:  -r.inkTop,
 			Descent: math.Max(0, r.inkBottom),
 		}

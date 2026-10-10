@@ -148,6 +148,22 @@ def grid():
     return fig
 
 
+def tight():
+    fig, axs = plt.subplots(2, 2)
+    x = np.linspace(0, 10, 100)
+    for i in range(2):
+        for j in range(2):
+            k = 1 + 2 * i + j
+            a = axs[i][j]
+            a.plot(x, 10.0 ** k * np.sin(x / k))
+            a.set_title(f"panel {k}")
+            a.set_xlabel("time (s)")
+            a.set_ylabel("signal")
+    axs[0][0].axhline(0, color="k", linewidth=0.8)
+    fig.tight_layout()
+    return fig
+
+
 def ndarray():
     fig, ax = plt.subplots()
     ax.plot(np.array([3, 1, 4, 1, 5, 9, 2, 6, 5, 3], dtype=np.int32), marker="o")
@@ -155,7 +171,7 @@ def ndarray():
 
 
 FIGURES = dict(line=line, scatter=scatter, bars=bars, hist=hist, imshow=imshow,
-               contour=contour, log=log, misc=misc, twinx=twinx, grid=grid,
+               contour=contour, log=log, misc=misc, twinx=twinx, grid=grid, tight=tight,
                ndarray=ndarray)
 
 if __name__ == "__main__":

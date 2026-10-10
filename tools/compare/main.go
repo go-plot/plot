@@ -178,6 +178,22 @@ var Figures = map[string]func() *plot.Figure{
 		}
 		return fig
 	},
+	"tight": func() *plot.Figure {
+		fig, axs := plot.Subplots(2, 2)
+		x := linspace(0, 10, 100)
+		for i, row := range axs {
+			for j, a := range row {
+				k := float64(1 + 2*i + j)
+				a.Plot(x, apply(x, func(v float64) float64 { return math.Pow(10, k) * math.Sin(v/k) }))
+				a.SetTitle(fmt.Sprintf("panel %d", int(k)))
+				a.SetXLabel("time (s)")
+				a.SetYLabel("signal")
+			}
+		}
+		axs[0][0].Axhline(0, plot.Color("k"), plot.LineWidth(0.8))
+		fig.TightLayout()
+		return fig
+	},
 	"ndarray": func() *plot.Figure {
 		fig, axs := plot.Subplots(1, 1)
 		a, _ := ndarray.FromSlice([]int32{3, 1, 4, 1, 5, 9, 2, 6, 5, 3}, 10)

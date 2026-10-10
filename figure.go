@@ -41,8 +41,11 @@ type Figure struct {
 	// Text lays out every string in the figure. The default sets text in
 	// DejaVu Sans and TeX math with go-tex/math; replace it to change fonts.
 	Text text.Renderer
+	// SubplotParams place the grids made by Subplots; TightLayout sets them.
+	SubplotParams SubplotParams
 
-	axes []*Axes
+	axes    []*Axes
+	collect *[]box // while measuring: the extent of every text drawn
 }
 
 // A FigOption configures a new Figure.
@@ -58,7 +61,7 @@ func DPI(d float64) FigOption { return func(f *Figure) { f.DPI = d } }
 // NewFigure returns an empty figure with matplotlib's defaults: 6.4 x 4.8
 // inches at 100 dpi on white.
 func NewFigure(opts ...FigOption) *Figure {
-	f := &Figure{Width: 6.4, Height: 4.8, DPI: 100, Facecolor: colors.RGBA{R: 1, G: 1, B: 1, A: 1}}
+	f := &Figure{Width: 6.4, Height: 4.8, DPI: 100, Facecolor: colors.RGBA{R: 1, G: 1, B: 1, A: 1}, SubplotParams: defaultSubplotParams}
 	for _, o := range opts {
 		o(f)
 	}
@@ -75,27 +78,52 @@ func Subplots(rows, cols int, opts ...FigOption) (*Figure, [][]*Axes) {
 	return f, f.Subplots(rows, cols)
 }
 
-// subplotParams are matplotlib's figure.subplot.* defaults.
-const (
-	spLeft, spRight, spBottom, spTop = 0.125, 0.9, 0.11, 0.88
-	spWSpace, spHSpace               = 0.2, 0.2
-)
+// SubplotParams are matplotlib's figure.subplot.* parameters: where the
+// grid of Subplots sits in the figure (fractions) and the space between its
+// cells (fractions of the average cell width and height).
+type SubplotParams struct {
+	Left, Right, Bottom, Top float64
+	WSpace, HSpace           float64
+}
+
+// defaultSubplotParams are matplotlib's defaults.
+var defaultSubplotParams = SubplotParams{Left: 0.125, Right: 0.9, Bottom: 0.11, Top: 0.88, WSpace: 0.2, HSpace: 0.2}
+
+// gridSpec is a rows x cols grid made by Subplots.
+type gridSpec struct{ rows, cols int }
+
+// cell is where an Axes sits in a grid.
+type cell struct {
+	g        *gridSpec
+	row, col int
+}
+
+// cellRect is the position of a grid cell under sp, as matplotlib's
+// GridSpec computes it.
+func (sp SubplotParams) cellRect(c cell) rect {
+	rows, cols := float64(c.g.rows), float64(c.g.cols)
+	totW, totH := sp.Right-sp.Left, sp.Top-sp.Bottom
+	cellH := totH / (rows + sp.HSpace*(rows-1))
+	sepH := sp.HSpace * cellH
+	cellW := totW / (cols + sp.WSpace*(cols-1))
+	sepW := sp.WSpace * cellW
+	top := sp.Top - float64(c.row)*(cellH+sepH)
+	left := sp.Left + float64(c.col)*(cellW+sepW)
+	return rect{left, top - cellH, cellW, cellH}
+}
 
 // Subplots adds a rows x cols grid of Axes placed as matplotlib's GridSpec
 // places them.
 func (f *Figure) Subplots(rows, cols int) [][]*Axes {
-	totW, totH := spRight-spLeft, spTop-spBottom
-	cellH := totH / (float64(rows) + spHSpace*float64(rows-1))
-	sepH := spHSpace * cellH
-	cellW := totW / (float64(cols) + spWSpace*float64(cols-1))
-	sepW := spWSpace * cellW
+	g := &gridSpec{rows, cols}
 	out := make([][]*Axes, rows)
 	for i := range rows {
 		out[i] = make([]*Axes, cols)
-		top := spTop - float64(i)*(cellH+sepH)
 		for j := range cols {
-			left := spLeft + float64(j)*(cellW+sepW)
-			out[i][j] = f.AddAxes(left, top-cellH, cellW, cellH)
+			c := cell{g, i, j}
+			r := f.SubplotParams.cellRect(c)
+			out[i][j] = f.AddAxes(r.x, r.y, r.w, r.h)
+			out[i][j].cell = &c
 		}
 	}
 	return out

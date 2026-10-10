@@ -43,6 +43,8 @@ type Axes struct {
 	boxAspect float64 // 0 none; height/width of the axes box
 	anchor    [2]float64
 	colorbar  *colorbarSpec
+	cell      *cell // where Subplots put it, or nil
+	cbar      *Axes // its colorbar, if any
 
 	hasYOffset bool    // set while drawing: the y offset text exists
 	yOffsetTop float64 // and its top, in pixels
@@ -88,6 +90,7 @@ func (a *Axes) Figure() *Figure { return a.fig }
 func (a *Axes) TwinX() *Axes {
 	t := a.fig.AddAxes(a.pos.x, a.pos.y, a.pos.w, a.pos.h)
 	t.x = a.x
+	t.cell = a.cell
 	a.x.owners = append(a.x.owners, t)
 	t.xHidden = true
 	t.frameOff = true

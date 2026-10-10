@@ -23,6 +23,23 @@ targets, 386, arm, `js/wasm` and `wasip1/wasm`.
 
 ## API decisions
 
+**Shaped by what notebooks call.** A census of 339 scientific notebooks
+(measured for this ecosystem) ranks plotting first among the things that keep
+them from moving to Go, and gives the share of notebooks using each call:
+`pyplot.subplots` 62 %, `Axes.plot` 56 %, `pyplot.show` 52 %,
+`Axes.set_xlabel` 47 %, `Axes.legend` 46 %, `Axes.set_ylabel` 45 %,
+`Axes.set_title` 37 %, `pyplot.figure` 27 %, `tight_layout` 27 %,
+module-level `pyplot.plot`/`xlabel`/`ylabel` about 22 %, `Axes.set_ylim` 21 %,
+`Axes.axhline` 20 %. Most write `fig, ax = plt.subplots(); ax.plot(...)`. So v0
+is the object-oriented API, and every one of those operations exists under the
+same name: `Subplots`, `Plot`, `SetXLabel`, `Legend` (with matplotlib's
+location names and `"best"`), `SetYLabel`, `SetTitle`, `NewFigure`,
+`Figure.TightLayout`, `SetYLim`, `Axhline`; `pyplot.show` is the notebook's
+call to `Figure.Display`. The module-level, state-machine functions
+(`plt.plot`, `plt.xlabel` acting on a hidden "current" Axes) are deliberately
+not provided: they are the minority form, and hidden global state is what a
+Go notebook kernel running cells concurrently should not have.
+
 **matplotlib's object model, Go's argument style.** `Subplots(rows, cols)`
 returns the figure and a `[][]*Axes`; plot types are `Axes` methods named as in
 matplotlib (`Plot`, `Scatter`, `Bar`, `Barh`, `Hist`, `FillBetween`, `ErrorBar`,
@@ -97,11 +114,12 @@ stated.
 | Defaults | figure 6.4 x 4.8 in at 100 dpi, subplot parameters, font sizes, tick sizes and pads, line widths, marker sizes, dash patterns (scaled by line width), patch and grid colours, legend geometry, colorbar fraction/pad/aspect: transcribed from matplotlibrc and checked by the rendering comparison below. |
 | Histogram binning | NumPy's algorithm (equal bins by arithmetic, corrected against the edges; explicit edges by `searchsorted`). |
 | Contour levels | `ContourSet._autolev` (MaxNLocator(n+1, min_n_ticks=1), trimmed). |
+| `TightLayout` | matplotlib's `_auto_adjust_subplotpars`, ported; `testdata/layout.json` holds matplotlib's positions after `fig.tight_layout()` for 6 kinds of figure at two sizes (single Axes, labelled, 2x2 labelled, twinx with two labels, offsets, log-log). Every Axes edge is within 0.005 of the figure (worst measured 0.0049, 2.4 pixels): the algorithm is the same, the measured width of text is not — matplotlib's is FreeType's hinted box, every glyph a whole number of pixels; go-plot's is the string's advance. |
 | Dense lines | matplotlib's `PathSimplifier` (threshold 1/9 pixel), ported from `path_converters.h`. |
 
 ### Rendering comparison
 
-`tools/compare` draws eleven reference figures with go-plot (`main.go`) and
+`tools/compare` draws twelve reference figures with go-plot (`main.go`) and
 with matplotlib (`figures.py`) — same data, size and dpi — and `compare.py`
 measures each pair with **one detector applied to both images**: the axes
 frames (columns and rows of long dark runs), the tick marks (dark for the three
@@ -112,25 +130,32 @@ dilated by 1 pixel) at least 0.90.
 
 | figure | frames | ticks (go / mpl) | tick error | C0 pixels (go / mpl) | overlap | mean abs diff (0–255) |
 |---|---|---|---|---|---|---|
-| line | equal | 15 / 15 | 0 px | 1695 / 1736 | 0.999 | 2.10 |
-| scatter + colorbar | equal | 11 / 11 | 0 px | – | – | 0.76 |
-| bars (1x2) | equal | 26 / 26 | 0 px | 76024 / 76034 | 1.000 | 1.56 |
-| hist | equal | 17 / 17 | 0 px | 49515 / 49515 | 1.000 | 1.33 |
-| imshow + colorbar | equal | 16 / 16 | 0 px | 38429 / 38683 | 1.000 | 1.11 |
-| contourf + contour + colorbar | equal | 16 / 16 | 0 px | – | – | 1.30 |
+| line | equal | 15 / 15 | 0 px | 1695 / 1736 | 1.000 | 1.01 |
+| scatter + colorbar | equal | 11 / 11 | 0 px | – | – | 0.53 |
+| bars (1x2) | equal | 26 / 26 | 0 px | 76024 / 76034 | 1.000 | 0.67 |
+| hist | equal | 17 / 17 | 0 px | 49515 / 49515 | 1.000 | 0.63 |
+| imshow + colorbar | equal | 16 / 16 | 0 px | 38429 / 38683 | 1.000 | 0.77 |
+| contourf + contour + colorbar | equal | 16 / 16 | 0 px | – | – | 0.75 |
 | log-log with grid | equal | 11 / 11 | 0 px | 770 / 775 | 1.000 | 0.64 |
-| errorbar, fill, axhline/axvline, text, annotate | equal | 14 / 14 | 0 px | 1688 / 1558 | 0.994 | 1.50 |
-| twinx | equal | 11 / 11 | 0 px | 881 / 891 | 1.000 | 1.60 |
-| 2x2 grid, offsets | equal | 41 / 41 | 0 px | 4991 / 4944 | 0.997 | 3.97 |
-| int32 ndarray with markers | equal | 14 / 14 | 0 px | 2380 / 2465 | 1.000 | 0.58 |
+| errorbar, fill, axhline/axvline, text, annotate | equal | 14 / 14 | 0 px | 1688 / 1558 | 0.994 | 1.03 |
+| twinx | equal | 11 / 11 | 0 px | 881 / 891 | 1.000 | 0.94 |
+| 2x2 grid, offsets | equal | 41 / 41 | 0 px | 4991 / 4944 | 0.997 | 1.79 |
+| int32 ndarray with markers | equal | 14 / 14 | 0 px | 2380 / 2465 | 1.000 | 0.32 |
 | 1000² imshow (perf figure) | equal | 10 / 10 | 0 px | 17426 / 17629 | 1.000 | 1.59 |
+| **2x2 labelled, `TightLayout`** | **±2 px** | 14 / 14 | **2 px** | 713 / 700 | 0.970 | 6.71 |
 | **1e6-point line (perf figure)** | equal | 13 / 13 | 0 px | **12032 / 15405** | 1.000 | 2.07 |
 
-Every frame lands on the same pixel rows and columns, and every tick on the
-same pixel. The images were also looked at, side by side (`sidebyside.py`,
-`crop.py`).
+In twelve of the fourteen, every frame lands on the same pixel rows and
+columns and every tick on the same pixel. The images were also looked at, side
+by side (`sidebyside.py`, `crop.py`).
 
-The one failure is the dense line: go-plot paints 22 % fewer *saturated* C0
+Two fail the tolerances, and are reported rather than loosened:
+
+- **`TightLayout`**: frames and ticks within 2 pixels, not 1, for the reason
+  given in the table above — the width of tick labels, which tight layout makes
+  room for, is measured differently. Side by side the figures are not
+  distinguishable by eye.
+- **The dense line**: go-plot paints 22 % fewer *saturated* C0
 pixels. Every go-plot pixel is within one pixel of a matplotlib one (overlap
 1.000); the difference is how dark the edges of a stroke that crosses itself
 thousands of times come out — Agg's scanline accumulates such a stroke
@@ -149,7 +174,8 @@ overlap, so a one-pixel slip of the data does not pass.
 
 - **Text rendering.** Glyphs are filled outlines (go-gfx coverage), not
   FreeType's hinted rasterisation with matplotlib's text antialiasing, so the
-  pixels of text differ; positions are matplotlib's
+  pixels of text differ, and a string's box is its advance where matplotlib's
+  is FreeType's hinted box (up to a few pixels wider on long labels); positions are matplotlib's
   (`Text._get_layout`: line metrics from the OS/2 table, alignment, rotation,
   anchoring), and like Agg the pen is put on a whole pixel. Kerning comes from
   DejaVu's GPOS/kern tables through go-opentype.
@@ -183,8 +209,9 @@ overlap, so a one-pixel slip of the data does not pass.
 
 ## Not in v0
 
-symlog, logit and date axes; minor ticks on linear axes (off by default in
-matplotlib too) and `AutoMinorLocator`; `tight_layout`/`constrained_layout`;
+module-level `pyplot`-style functions (by design, see above); suptitle and
+`TightLayout` with explicit pads or `rect`; symlog, logit and date axes; minor ticks on linear axes (off by default in
+matplotlib too) and `AutoMinorLocator`; `constrained_layout`;
 `subplots` sharing; hatching; boxplot, violin, pie, quiver, stem, step,
 `pcolormesh`, 3-D; colorbar `extend` and discrete norms; image interpolation
 other than nearest; `Text` bounding boxes; legend columns, titles and

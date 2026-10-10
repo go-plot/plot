@@ -44,7 +44,7 @@ func TestLayoutPlain(t *testing.T) {
 		t.Errorf("Hg: %+v", l)
 	}
 	sp := d.Layout(" ", 20)
-	if sp.Width != 0 || sp.Ascent != 0 || len(sp.Path.Segs) != 0 {
+	if sp.Width < 6 || sp.Ascent != 0 || len(sp.Path.Segs) != 0 {
 		t.Errorf("space: %+v", sp)
 	}
 	a, de, gap := d.LineMetrics(2048)

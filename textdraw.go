@@ -160,6 +160,9 @@ func (f *Figure) layoutText(t textSpec) placedText {
 // drawText lays out and paints t, returning its window extent.
 func (f *Figure) drawText(r render.Renderer, t textSpec) box {
 	p := f.layoutText(t)
+	if f.collect != nil {
+		*f.collect = append(*f.collect, p.bbox)
+	}
 	r.DrawPath(p.path, render.Style{Fill: t.Color})
 	return p.bbox
 }

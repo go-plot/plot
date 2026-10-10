@@ -18,7 +18,8 @@ cycle, margins, tick placement and tick labels — so a figure looks the way a
 matplotlib user expects, and the parts that can be equal are **tested equal to
 matplotlib**: tick locations and labels on 408 real axes, eight colormaps entry
 for entry, and the layout of 30 figures (Axes positions, view limits, tick
-labels). What Go adds: one static binary, `js/wasm`, no Python, and TeX labels
+labels, and positions after `TightLayout`). The API is the object-oriented one
+that most notebooks use (`fig, ax = plt.subplots(); ax.plot(...)`). What Go adds: one static binary, `js/wasm`, no Python, and TeX labels
 set by a real TeX math typesetter ([go-tex/math](https://github.com/go-tex/math)).
 
 ## Example
@@ -58,21 +59,21 @@ any dtype. A notebook kernel calls `fig.Display()`, which returns the figure as
 
 | | |
 |---|---|
-| figures | `NewFigure`, `Subplots(rows, cols)`, `AddAxes`, size in inches and dpi |
+| figures | `NewFigure`, `Subplots(rows, cols)`, `AddAxes`, size in inches and dpi, `TightLayout` |
 | plots | `Plot` (lines, 17 markers, 4 line styles), `Scatter` (size and colour per point, colormaps), `Bar`, `Barh`, `Hist`, `FillBetween`, `ErrorBar`, `Imshow` (2-D data or RGB(A)), `Contour`, `Contourf`, `Axhline`, `Axvline`, `Text`, `Annotate` |
 | axes | titles, labels, `Legend` (with `"best"`), `Grid`, `SetXLim`/`SetYLim`, linear and log scales, `TwinX`, manual ticks, aspect |
 | colour | matplotlib's named colours, tab10 cycle, viridis, plasma, inferno, magma, cividis, gray, coolwarm, RdBu (and `_r`), `Colorbar`, `LogNorm` |
 | output | `SaveSVG`, `SavePNG`, `Display` |
 
-Not yet: symlog/date axes, `tight_layout`, boxplot/pie/violin, hatching, windows
+Not yet: symlog/date axes, `constrained_layout`, boxplot/pie/violin, hatching, windows
 (go-widgets/window), PDF. The full list, and every place where go-plot differs
 from matplotlib, is in [docs/design.md](docs/design.md).
 
 ## Compared with matplotlib
 
-Rendering: eleven reference figures drawn by both (same data, size, dpi) put
-every axes frame and every tick mark on the same pixel; the curves overlap to
-0.994–1.000 (see [docs/design.md](docs/design.md#rendering-comparison), with the
+Rendering: twelve reference figures drawn by both (same data, size, dpi) put
+every axes frame and every tick mark on the same pixel, and after
+`TightLayout` within 2 pixels; the curves overlap to 0.970–1.000 (see [docs/design.md](docs/design.md#rendering-comparison), with the
 negative controls the comparison is required to fail).
 
 Speed, in-process, medians of 9 interleaved fresh-process runs on a loaded

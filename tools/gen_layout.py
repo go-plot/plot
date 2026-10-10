@@ -111,8 +111,50 @@ CASES = dict(line=line, bar=bar, barh=barh, hist=hist, imshow=imshow,
              axlines=axlines, setlim=setlim)
 
 
+def labelled(fig):
+    ax = fig.subplots()
+    ax.plot(X, Y)
+    ax.set_title("A title")
+    ax.set_xlabel("x label")
+    ax.set_ylabel("y label")
+
+
+def grid22_labelled(fig):
+    axs = fig.subplots(2, 2)
+    for i, a in enumerate(axs.flat):
+        a.plot(X, [v * 10 ** i for v in Y])
+        a.set_title(f"panel {i}")
+        a.set_xlabel("time")
+        a.set_ylabel("value")
+
+
+def twin_labelled(fig):
+    ax = fig.subplots()
+    ax.plot(X, Y)
+    ax.set_ylabel("left")
+    t = ax.twinx()
+    t.plot(X, [v * 1000 for v in Y])
+    t.set_ylabel("right")
+
+
+# Figures laid out again by fig.tight_layout(), the operation 27% of the
+# notebooks in the census call.
+TIGHT = dict(line=line, labelled=labelled, grid22_labelled=grid22_labelled,
+             twin_labelled=twin_labelled, offset=offset, loglog=loglog)
+
+
 def main():
-    out = {"version": matplotlib.__version__, "cases": {}}
+    out = {"version": matplotlib.__version__, "cases": {}, "tight": {}}
+    for size in [(6.4, 4.8), (5.0, 3.0)]:
+        for name, mk in TIGHT.items():
+            fig = plt.figure(figsize=size, dpi=100)
+            mk(fig)
+            fig.tight_layout()
+            fig.canvas.draw()
+            out["tight"][f"{name}@{size[0]}x{size[1]}"] = [
+                [float(v) for v in (p.x0, p.y0, p.width, p.height)]
+                for p in (ax.get_position() for ax in fig.axes)]
+            plt.close(fig)
     for size in [(6.4, 4.8), (5.0, 3.0)]:
         for name, mk in CASES.items():
             fig = plt.figure(figsize=size, dpi=100)
