@@ -229,14 +229,10 @@ func searchRight(a []float64, v float64) int {
 	return lo
 }
 
-// linspace is numpy.linspace(lo, hi, n) with its rounding: step-multiplied
-// and the last value exact.
+// linspace is numpy.linspace(lo, hi, n) for n >= 2 with its rounding:
+// step-multiplied and the last value exact.
 func linspace(lo, hi float64, n int) []float64 {
 	out := make([]float64, n)
-	if n == 1 {
-		out[0] = lo
-		return out
-	}
 	step := (hi - lo) / float64(n-1)
 	for i := range out {
 		out[i] = float64(float64(i)*step) + lo

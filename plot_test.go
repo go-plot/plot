@@ -9,7 +9,6 @@ import (
 	"image/png"
 	"math"
 	"testing"
-
 )
 
 // render draws f both ways and checks that each output is well formed.

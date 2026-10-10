@@ -146,9 +146,6 @@ func (ax *axis) setLim(lo, hi float64) {
 	} else {
 		lo, hi = ticker.Nonsingular(lo, hi, 0.05, 1e-15, true)
 	}
-	if lo > hi {
-		lo, hi = hi, lo
-	}
 	ax.vmin, ax.vmax, ax.inverted, ax.auto = lo, hi, inv, false
 }
 
@@ -255,8 +252,14 @@ func logNonsingular(vmin, vmax, minpos float64) (float64, float64) {
 		vmin = minpos
 	}
 	if vmin == vmax {
-		vmin = math.Pow(10, math.Floor(math.Log10(vmin))-1)
-		vmax = math.Pow(10, math.Ceil(math.Log10(vmax))+1)
+		// matplotlib's _decade_less and _decade_greater: the decade
+		// strictly below and above.
+		e := math.Log10(vmin)
+		lo, hi := math.Floor(e), math.Ceil(e)
+		if lo == hi {
+			lo, hi = lo-1, hi+1
+		}
+		vmin, vmax = math.Pow(10, lo), math.Pow(10, hi)
 	}
 	return vmin, vmax
 }
@@ -307,9 +310,6 @@ func (ax *axis) autoscale() {
 	i0 := sort.SearchFloat64s(stickies, lo+tol) - 1
 	i1 := sort.SearchFloat64s(stickies, hi-tol)
 	tr, inv := ax.forward, ax.inverse
-	if ax.log && lo <= 0 {
-		lo = minpos
-	}
 	t0, t1 := tr(lo), tr(hi)
 	delta := (t1 - t0) * 0.05
 	if math.IsInf(delta, 0) || math.IsNaN(delta) {

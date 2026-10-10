@@ -52,21 +52,18 @@ func convert[T float32 | int | int64 | int32](s []T) []float64 {
 	return out
 }
 
-// Grid is a 2-D array of values in row-major order: Rows x Cols.
-type Grid struct {
+// gridData is a 2-D array of values in row-major order: Rows x Cols.
+type gridData struct {
 	Rows, Cols int
 	Z          []float64
 }
 
-// At returns the value at row i, column j.
-func (g Grid) At(i, j int) float64 { return g.Z[i*g.Cols+j] }
-
 // grid converts 2-D plot data: a 2-D *ndarray.Array of any dtype, or
 // [][]float64 with rows of equal length.
-func grid(v any) Grid {
+func grid(v any) gridData {
 	switch d := v.(type) {
 	case [][]float64:
-		g := Grid{Rows: len(d)}
+		g := gridData{Rows: len(d)}
 		if g.Rows > 0 {
 			g.Cols = len(d[0])
 		}
@@ -83,7 +80,7 @@ func grid(v any) Grid {
 		if len(sh) != 2 {
 			panic(fmt.Sprintf("plot: need a 2-D array, got shape %v", sh))
 		}
-		return Grid{Rows: sh[0], Cols: sh[1], Z: Values(d)}
+		return gridData{Rows: sh[0], Cols: sh[1], Z: Values(d)}
 	}
 	panic(fmt.Sprintf("plot: cannot use %T as 2-D data", v))
 }

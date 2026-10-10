@@ -87,6 +87,9 @@ func (c *contourArt) draw(a *Axes, r render.Renderer) {
 
 // autoLevels is matplotlib's ContourSet._autolev: MaxNLocator(n+1,
 // min_n_ticks=1) over the data range, trimmed to one level beyond each end.
+// (Its fallback for fewer than three levels cannot happen without the
+// "extend" option, which v0 does not have: at least one level lies in the
+// range, and one on each side of it.)
 func autoLevels(zmin, zmax float64, n int) []float64 {
 	loc := &ticker.MaxNLocator{Nbins: n + 1, MinNTicks: 1}
 	lev := loc.TickValues(zmin, zmax)
@@ -101,9 +104,6 @@ func autoLevels(zmin, zmax float64, n int) []float64 {
 			i1 = i + 1
 			break
 		}
-	}
-	if i1-i0 < 3 {
-		i0, i1 = 0, len(lev)
 	}
 	return lev[i0:i1]
 }
