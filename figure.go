@@ -127,13 +127,18 @@ func (f *Figure) Draw(r render.Renderer) {
 	bg.Rect(0, 0, float64(w), float64(h))
 	r.BeginGroup("figure_1")
 	r.DrawPath(&bg, render.Style{Fill: f.Facecolor})
-	for _, a := range f.axes {
-		a.layout()
-	}
+	f.layout()
 	for i, a := range f.axes {
 		a.draw(r, i+1)
 	}
 	r.EndGroup()
+}
+
+// layout settles every Axes: limits, position, ticks.
+func (f *Figure) layout() {
+	for _, a := range f.axes {
+		a.layout()
+	}
 }
 
 // Image renders the figure to an RGBA raster.

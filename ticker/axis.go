@@ -16,6 +16,9 @@ type Tick struct {
 type Ticks struct {
 	Major, Minor []Tick
 	Offset       string // text at the end of the axis, or ""
+	// Located is every major location the locator returned, inside the view
+	// or not, with its label: what matplotlib's get_ticklabels() lists.
+	Located []Tick
 }
 
 // Config is the locators and formatters of one axis. Minor and MinorFormat
@@ -57,6 +60,7 @@ func (c Config) Compute(vmin, vmax float64) Ticks {
 	major := c.Major.TickValues(vmin, vmax)
 	labels := FormatTicks(c.MajorFormat, major, vmin, vmax)
 	for i, l := range major {
+		out.Located = append(out.Located, Tick{Loc: l, Label: labels[i]})
 		if inView(l) {
 			out.Major = append(out.Major, Tick{Loc: l, Label: labels[i]})
 		}

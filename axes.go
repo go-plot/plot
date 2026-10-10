@@ -417,6 +417,7 @@ func (ax *axis) computeTicks(a *Axes) {
 				out.Major = append(out.Major, ticker.Tick{Loc: l, Label: lab})
 			}
 		}
+		out.Located = out.Major
 		if ax.tickLabels == nil {
 			out.Offset = f.Offset()
 		}
