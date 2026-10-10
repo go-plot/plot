@@ -195,13 +195,18 @@ func appendPathData(out *render.Path, d string, m render.Affine) {
 	var tok []string
 	for _, t := range f {
 		for len(t) > 0 {
-			k := strings.IndexAny(t[1:], "MLHVQCZz")
+			if strings.IndexByte("MLHVQCZz", t[0]) >= 0 {
+				tok = append(tok, t[:1])
+				t = t[1:]
+				continue
+			}
+			k := strings.IndexAny(t, "MLHVQCZz")
 			if k < 0 {
 				tok = append(tok, t)
 				break
 			}
-			tok = append(tok, t[:k+1])
-			t = t[k+1:]
+			tok = append(tok, t[:k])
+			t = t[k:]
 		}
 	}
 	var cmd byte
