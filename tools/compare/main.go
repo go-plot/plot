@@ -191,8 +191,8 @@ var Figures = map[string]func() *plot.Figure{
 var Perturbed = map[string]func() *plot.Figure{
 	"line_shifted": func() *plot.Figure {
 		fig := Figures["line"]()
-		// The same plot with the axes 3 pixels to the right and the x
-		// limits slightly wider: every tick moves.
+		// The same plot with the x limits widened by 0.1 data units at
+		// the left: every tick moves by about 4 pixels.
 		ax := fig.Axes()[0]
 		ax.SetXLim(-0.6, 10.5)
 		return fig
