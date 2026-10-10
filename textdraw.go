@@ -15,10 +15,6 @@ import (
 // box is a rectangle in pixels, y down.
 type box struct{ x0, y0, x1, y1 float64 }
 
-func (b box) union(o box) box {
-	return box{math.Min(b.x0, o.x0), math.Min(b.y0, o.y0), math.Max(b.x1, o.x1), math.Max(b.y1, o.y1)}
-}
-
 // textSpec is a string to place: anchored at (X, Y) pixels, size in pixels,
 // aligned and rotated as a matplotlib Text with rotation_mode "default"
 // (Anchor false) or "anchor".

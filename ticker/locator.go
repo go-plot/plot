@@ -200,6 +200,10 @@ type LogLocator struct {
 	// SubsAuto is matplotlib's subs="auto": ticks between the powers of Base
 	// (2..Base-1) when few decades are shown, none otherwise.
 	SubsAuto bool
+	// SubsAll is matplotlib's subs="all": like SubsAuto, but the powers of
+	// Base themselves are included, and when too many decades are shown it
+	// falls back to the powers alone.
+	SubsAll bool
 	// NumTicks is the maximum number of ticks; zero means "auto" (TickSpace
 	// clipped to [2, 9], or 9 when TickSpace is zero).
 	NumTicks  int
@@ -251,13 +255,19 @@ func (l *LogLocator) TickValues(vmin, vmax float64) []float64 {
 	emax := int(math.Floor(efmax))
 	nAvail := emax - emin + 1
 	subs := l.Subs
-	if l.SubsAuto {
-		if nAvail >= 10 || b < 3 {
+	if l.SubsAuto || l.SubsAll {
+		subs = []float64{1}
+		if nAvail < 10 && b >= 3 {
+			first := 2.0
+			if l.SubsAll {
+				first = 1
+			}
+			subs = nil
+			for s := first; s < b; s++ {
+				subs = append(subs, s)
+			}
+		} else if l.SubsAuto {
 			return nil
-		}
-		subs = nil
-		for s := 2.0; s < b; s++ {
-			subs = append(subs, s)
 		}
 	} else if subs == nil {
 		subs = []float64{1}

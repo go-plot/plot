@@ -211,14 +211,16 @@ func Band(g Grid, lo, hi float64) [][]Pt {
 			if mx > hi && len(p) > 0 {
 				p = clip(p, hi, true)
 			}
-			if len(p) < 3 {
-				continue
-			}
 			pts := make([]Pt, len(p))
 			for k, v := range p {
 				pts[k] = Pt{v.x, v.y}
 			}
-			if area(pts) < 0 {
+			// What touches the band only along an edge or at a corner
+			// encloses nothing and is dropped.
+			switch a := area(pts); {
+			case a == 0:
+				continue
+			case a < 0:
 				for l, r := 0, len(pts)-1; l < r; l, r = l+1, r-1 {
 					pts[l], pts[r] = pts[r], pts[l]
 				}

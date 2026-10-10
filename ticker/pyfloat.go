@@ -154,12 +154,10 @@ func Nonsingular(vmin, vmax, expander, tiny float64, increasing bool) (float64, 
 	if maxabs < (1e6/tiny)*2.2250738585072014e-308 {
 		vmin, vmax = -expander, expander
 	} else if vmax-vmin <= maxabs*tiny {
-		if vmax == 0 && vmin == 0 {
-			vmin, vmax = -expander, expander
-		} else {
-			vmin -= float64(expander * math.Abs(vmin))
-			vmax += float64(expander * math.Abs(vmax))
-		}
+		// matplotlib tests for vmin == vmax == 0 here too, but zeros
+		// already took the branch above.
+		vmin -= float64(expander * math.Abs(vmin))
+		vmax += float64(expander * math.Abs(vmax))
 	}
 	if swapped && !increasing {
 		vmin, vmax = vmax, vmin

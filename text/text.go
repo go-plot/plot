@@ -73,10 +73,7 @@ var (
 // NewDefault returns the shared default Renderer.
 func NewDefault() *Default {
 	defaultOnce.Do(func() {
-		f, err := opentype.Parse(dejavusans.TTF)
-		if err != nil {
-			panic("text: embedded DejaVu Sans does not parse: " + err.Error())
-		}
+		f := must(opentype.Parse(dejavusans.TTF))
 		d := &Default{
 			font:   f,
 			face:   f.NewFace(f.UnitsPerEm()),
@@ -104,13 +101,18 @@ func NewDefault() *Default {
 // the first time a label needs it.
 func (d *Default) texRenderer() *texmath.Renderer {
 	d.texOnce.Do(func() {
-		tex, err := texmath.New(texmath.DefaultFont())
-		if err != nil {
-			panic("text: embedded math font does not load: " + err.Error())
-		}
-		d.tex = tex
+		d.tex = must(texmath.New(texmath.DefaultFont()))
 	})
 	return d.tex
+}
+
+// must returns v, or panics with err: the fonts it guards are embedded, so a
+// failure is a broken build, not a condition to handle.
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic("text: embedded font: " + err.Error())
+	}
+	return v
 }
 
 // LineMetrics implements Renderer.
