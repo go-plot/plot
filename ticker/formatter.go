@@ -361,7 +361,11 @@ func (f *LogFormatterSciNotation) Format(x float64) string {
 	if isDecade {
 		exponent = math.RoundToEven(fx)
 	}
-	coeff := math.RoundToEven(math.Pow(b, fx-exponent))
+	// matplotlib computes b**(fx - exponent), which lands within an ulp of
+	// a half-integer for x = 6, b = 2 and rounds to either side depending on
+	// the platform's pow; x / b**exponent is exact for the powers of 2 and
+	// 10 and gives the answer every platform should.
+	coeff := math.RoundToEven(x / math.Pow(b, exponent))
 	if f.LabelOnlyBase && !isDecade {
 		return ""
 	}
@@ -374,7 +378,7 @@ func (f *LogFormatterSciNotation) Format(x float64) string {
 		s = `$\mathdefault{` + sign + bs + `^{` + strconv.Itoa(int(math.RoundToEven(fx))) + `}}$`
 	} else {
 		e := math.Floor(fx)
-		c := math.Pow(b, fx-e)
+		c := x / math.Pow(b, e)
 		if isCloseToInt(c) {
 			c = math.RoundToEven(c)
 		}
