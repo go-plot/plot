@@ -1,5 +1,8 @@
+<p align="center"><img src="https://raw.githubusercontent.com/go-plot/brand/main/social/go-plot.png" alt="go-plot/plot" width="720"></p>
+
 # go-plot/plot
 
+[![Docs](https://img.shields.io/badge/docs-hugo%20%2B%20hextra-1f77b4)](https://go-plot.github.io/docs/)
 [![CI](https://github.com/go-plot/plot/actions/workflows/ci.yml/badge.svg)](https://github.com/go-plot/plot/actions/workflows/ci.yml)
 [![pkg.go.dev](https://img.shields.io/badge/pkg.go.dev-plot-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/go-plot/plot)
 ![coverage](https://img.shields.io/badge/coverage-100%25-1a7f37)
@@ -10,6 +13,8 @@
 
 Pure-Go (CGO=0) plotting for [go-ndarray](https://github.com/go-ndarray/ndarray):
 matplotlib-class figures to SVG and PNG, with real TeX in the labels.
+
+🌐 **[Website](https://go-plot.github.io)** · 📚 **[Documentation](https://go-plot.github.io/docs/)**
 
 ![A line plot of two signals with TeX labels, drawn by go-plot](docs/readme.svg)
 
