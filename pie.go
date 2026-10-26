@@ -131,15 +131,19 @@ func unitArc(theta1, theta2 float64) []render.Pt {
 	const halfpi = math.Pi * 0.5
 	nTurns := (theta2 - theta1) / 360
 	nearest := math.RoundToEven(nTurns)
-	eta2 := theta2 - 360*math.Floor(nTurns)
+	// Every product is rounded on its own (float64(...)), as NumPy rounds
+	// it: Go fuses x*y-z into one rounding on arm64, ppc64le, s390x, riscv64
+	// and loong64, and e2-e1 of an empty wedge then comes out a few ulps
+	// above 0, which doubles the segment count.
+	eta2 := theta2 - float64(360*math.Floor(nTurns))
 	if nearest != 0 && math.Abs(nTurns-nearest) <= 1e-12 {
 		eta2 = theta1 + 360
 	}
-	e1, e2 := theta1*(math.Pi/180), eta2*(math.Pi/180)
+	e1, e2 := float64(theta1*(math.Pi/180)), float64(eta2*(math.Pi/180))
 	n := int(math.Pow(2, math.Ceil((e2-e1)/halfpi)))
 	deta := (e2 - e1) / float64(n)
 	t := math.Tan(0.5 * deta)
-	alpha := math.Sin(deta) * (math.Sqrt(4.0+3.0*t*t) - 1) / 3.0
+	alpha := float64(math.Sin(deta)*(math.Sqrt(float64(4.0+float64(3.0*t*t)))-1)) / 3.0
 	steps := linspace(e1, e2, n+1)
 	v := make([]render.Pt, 0, 3*n+1)
 	v = append(v, render.Pt{X: math.Cos(steps[0]), Y: math.Sin(steps[0])})
@@ -147,8 +151,8 @@ func unitArc(theta1, theta2 float64) []render.Pt {
 		xA, yA := math.Cos(steps[i]), math.Sin(steps[i])
 		xB, yB := math.Cos(steps[i+1]), math.Sin(steps[i+1])
 		v = append(v,
-			render.Pt{X: xA + alpha*-yA, Y: yA + alpha*xA},
-			render.Pt{X: xB - alpha*-yB, Y: yB - alpha*xB},
+			render.Pt{X: xA + float64(alpha*-yA), Y: yA + float64(alpha*xA)},
+			render.Pt{X: xB - float64(alpha*-yB), Y: yB - float64(alpha*xB)},
 			render.Pt{X: xB, Y: yB})
 	}
 	return v
@@ -182,7 +186,7 @@ func (w *wedge) vertices() ([]render.Pt, []uint8) {
 		c = append(append(c, codes...), connector, codeClose)
 	}
 	for i := range v {
-		v[i] = render.Pt{X: v[i].X*w.r + w.cx, Y: v[i].Y*w.r + w.cy}
+		v[i] = render.Pt{X: float64(v[i].X*w.r) + w.cx, Y: float64(v[i].Y*w.r) + w.cy}
 	}
 	return v, c
 }
@@ -365,7 +369,7 @@ func (a *Axes) Pie(x any, opts ...Option) error {
 			}
 		}
 		w := &wedge{
-			cx: p.center[0] + explode[i]*math.Cos(thetam), cy: p.center[1] + explode[i]*math.Sin(thetam),
+			cx: p.center[0] + float64(explode[i]*math.Cos(thetam)), cy: p.center[1] + float64(explode[i]*math.Sin(thetam)),
 			r: radius, theta1: 360 * math.Min(theta1, theta2), theta2: 360 * math.Max(theta1, theta2),
 			width: p.wedgeWidth, style: st, label: labels[i], plain: p.plain, z: z,
 		}
@@ -438,8 +442,11 @@ func (a *Axes) pieLabel(ws []*wedge, labels []string, distance float64, outer, r
 			continue
 		}
 		thetam := 2 * math.Pi * 0.5 * (w.theta1 + w.theta2) / 360
-		xt := w.cx + distance*w.r*math.Cos(thetam)
-		yt := w.cy + distance*w.r*math.Sin(thetam)
+		// Rounded product by product, as NumPy does: on the fusing
+		// architectures, xt of a label at 12 o'clock changes sign, and
+		// with it the alignment.
+		xt := w.cx + float64(float64(distance*w.r)*math.Cos(thetam))
+		yt := w.cy + float64(float64(distance*w.r)*math.Sin(thetam))
 		ha, va, rot := "center", "center", 0.0
 		if outer {
 			ha = "right"

@@ -74,9 +74,13 @@ func isHex(c byte) bool { return c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F' ||
 // sameSVG reports whether two documents are equal but for numbers within
 // 2/1000 pixel: the architectures that fuse multiply-adds round some
 // coordinates one step differently.
+//
+// Line ends are compared as LF: a Windows checkout turns the golden files'
+// into CRLF.
 func sameSVG(a, b []byte) bool {
-	ta, na := tokens(a)
-	tb, nb := tokens(b)
+	crlf, lf := []byte("\r\n"), []byte("\n")
+	ta, na := tokens(bytes.ReplaceAll(a, crlf, lf))
+	tb, nb := tokens(bytes.ReplaceAll(b, crlf, lf))
 	if len(ta) != len(tb) || len(na) != len(nb) {
 		return false
 	}
@@ -137,5 +141,8 @@ func TestSameSVG(t *testing.T) {
 		if got := sameSVG(base, []byte(c.doc)); got != c.same {
 			t.Errorf("%s: same=%v, want %v", c.doc, got, c.same)
 		}
+	}
+	if !sameSVG([]byte("<g>\n<path d=\"M1 2\"/>\n"), []byte("<g>\r\n<path d=\"M1 2\"/>\r\n")) {
+		t.Error("CRLF line ends make a difference")
 	}
 }
