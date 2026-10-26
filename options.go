@@ -78,7 +78,7 @@ type props struct {
 	noNormalize      bool
 	textColor        colors.RGBA
 	setTextColor     bool
-	plain            bool
+	textMode         textMode
 	spreadLabels     bool
 	donut            bool
 }

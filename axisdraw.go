@@ -72,7 +72,7 @@ func (a *Axes) drawXAxis(r render.Renderer) {
 			x := a.xPx(t.loc)
 			r.DrawPath(line(x, y, x, y+f.pt(t.size)), render.Style{Stroke: black, Width: f.pt(t.width), Snap: true})
 			if t.label != "" {
-				b := f.drawText(r, textSpec{S: t.label, X: x, Y: y + f.pt(t.size+t.pad), Size: size, HA: "center", VA: "top", Color: black})
+				b := f.drawText(r, textSpec{S: t.label, X: x, Y: y + f.pt(t.size+t.pad), Size: size, HA: "center", VA: "top", Color: black, Plain: ax.callerTicks(f)})
 				labels = append(labels, b)
 			}
 		}
@@ -84,11 +84,11 @@ func (a *Axes) drawXAxis(r render.Renderer) {
 	if ax.ticksOut.Offset != "" {
 		f.drawText(r, textSpec{S: ax.ticksOut.Offset, X: a.px.x1, Y: bottom + f.pt(offsetTextPad), Size: size, HA: "right", VA: "top", Color: black})
 	}
-	if ax.label != "" {
+	if ax.label.s != "" {
 		// The spine's extent counts, and matplotlib extends it by the
 		// length of the outward ticks.
 		bottom = math.Max(bottom, y+f.pt(majorTickSize))
-		f.drawText(r, textSpec{S: ax.label, X: (a.px.x0 + a.px.x1) / 2, Y: bottom + f.pt(labelPad), Size: f.pt(labelSize), HA: "center", VA: "top", Color: black})
+		f.drawText(r, textSpec{S: ax.label.s, X: (a.px.x0 + a.px.x1) / 2, Y: bottom + f.pt(labelPad), Size: f.pt(labelSize), HA: "center", VA: "top", Color: black, Plain: f.plain(ax.label.mode)})
 	}
 }
 
@@ -114,7 +114,7 @@ func (a *Axes) drawYAxis(r render.Renderer) {
 			y := a.yPx(t.loc)
 			r.DrawPath(line(x, y, x+dir*f.pt(t.size), y), render.Style{Stroke: black, Width: f.pt(t.width), Snap: true})
 			if t.label != "" {
-				b := f.drawText(r, textSpec{S: t.label, X: x + dir*f.pt(t.size+t.pad), Y: y, Size: size, HA: ha, VA: "center_baseline", Color: black})
+				b := f.drawText(r, textSpec{S: t.label, X: x + dir*f.pt(t.size+t.pad), Y: y, Size: size, HA: ha, VA: "center_baseline", Color: black, Plain: ax.callerTicks(f)})
 				labels = append(labels, b)
 			}
 		}
@@ -128,7 +128,7 @@ func (a *Axes) drawYAxis(r render.Renderer) {
 		a.yOffsetTop = b.y0
 		a.hasYOffset = true
 	}
-	if ax.label != "" {
+	if ax.label.s != "" {
 		edge := x + dir*f.pt(majorTickSize)
 		for _, b := range labels {
 			if ax.right {
@@ -141,8 +141,14 @@ func (a *Axes) drawYAxis(r render.Renderer) {
 		if ax.right {
 			va = "top"
 		}
-		f.drawText(r, textSpec{S: ax.label, X: edge + dir*f.pt(labelPad), Y: (a.px.y0 + a.px.y1) / 2, Size: f.pt(labelSize), HA: "center", VA: va, Rot: 90, Anchor: true, Color: black})
+		f.drawText(r, textSpec{S: ax.label.s, X: edge + dir*f.pt(labelPad), Y: (a.px.y0 + a.px.y1) / 2, Size: f.pt(labelSize), HA: "center", VA: va, Rot: 90, Anchor: true, Color: black, Plain: f.plain(ax.label.mode)})
 	}
+}
+
+// callerTicks reports whether the tick labels are the caller's and set
+// without TeX. The formatters' labels are go-plot's own and stay math.
+func (ax *axis) callerTicks(f *Figure) bool {
+	return ax.setTicks && ax.tickLabels != nil && f.plain(ax.tickMode)
 }
 
 // tickInfo is a tick with the size of its kind.
@@ -179,11 +185,11 @@ func (a *Axes) drawSpines(r render.Renderer) {
 // drawTitle draws the title centred above the Axes, its baseline 6 points
 // above the box — higher if the y axis offset text would run into it.
 func (a *Axes) drawTitle(r render.Renderer) {
-	if a.title == "" {
+	if a.title.s == "" {
 		return
 	}
 	f := a.fig
-	spec := textSpec{S: a.title, X: (a.px.x0 + a.px.x1) / 2, Y: a.px.y0 - f.pt(titlePad), Size: f.pt(titleSize), HA: "center", VA: "baseline", Color: black}
+	spec := textSpec{S: a.title.s, X: (a.px.x0 + a.px.x1) / 2, Y: a.px.y0 - f.pt(titlePad), Size: f.pt(titleSize), HA: "center", VA: "baseline", Color: black, Plain: f.plain(a.title.mode)}
 	if a.hasYOffset {
 		if p := f.layoutText(spec); p.bbox.y1 > a.yOffsetTop {
 			spec.Y = a.yOffsetTop - f.pt(titlePad)

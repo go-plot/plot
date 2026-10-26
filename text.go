@@ -23,7 +23,7 @@ type textArt struct {
 	z      float64
 	arrow  bool
 	ax, ay float64 // the annotated point
-	plain  bool    // no TeX
+	mode   textMode
 }
 
 func (t *textArt) zorder() float64           { return t.z }
@@ -34,7 +34,7 @@ func (t *textArt) legendEntry() *legendEntry { return nil }
 // spec is the text placed in figure pixels.
 func (t *textArt) spec(a *Axes) textSpec {
 	x, y := a.toPx(t.x, t.y)
-	return textSpec{S: t.s, X: x, Y: y, Size: a.fig.pt(t.size), HA: t.ha, VA: t.va, Rot: t.rot, Color: t.color, Plain: t.plain}
+	return textSpec{S: t.s, X: x, Y: y, Size: a.fig.pt(t.size), HA: t.ha, VA: t.va, Rot: t.rot, Color: t.color, Plain: a.fig.plain(t.mode)}
 }
 
 func (t *textArt) draw(a *Axes, r render.Renderer) {
@@ -110,14 +110,17 @@ func newText(p props, s string, x, y float64) *textArt {
 	if p.setZorder {
 		t.z = p.zorder
 	}
+	t.mode = p.textMode
 	return t
 }
 
 // Text writes s at (x, y) in data coordinates, as matplotlib's ax.text: 10
 // points, black, left-aligned on its baseline, not clipped. s may contain
-// TeX math between dollar signs.
+// TeX math between dollar signs, unless PlainText (or the figure's
+// ParseMath(false)) says to set it as it is.
 //
-// Options: FontSize, Color, Alpha, HA, VA, Rotation, ZOrder.
+// Options: FontSize, Color, Alpha, HA, VA, Rotation, ZOrder, PlainText,
+// MathText.
 func (a *Axes) Text(x, y float64, s string, opts ...Option) {
 	a.add(newText(collect(opts), s, x, y))
 }

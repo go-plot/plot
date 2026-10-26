@@ -90,11 +90,6 @@ func TextColor(c string) Option {
 	return func(p *props) { p.textColor, p.setTextColor = col, true }
 }
 
-// PlainText sets the labels as they are, with no TeX: "$5 and $6" stays
-// two dollar signs, and no label reaches the TeX typesetter. Use it for
-// labels that come from data.
-func PlainText() Option { return func(p *props) { p.plain = true } }
-
 // SpreadLabels moves the outer labels of a Pie apart vertically where they
 // would overlap (thin wedges side by side), and draws a leader line from
 // each moved label to its wedge. matplotlib has no such option: without it,
@@ -112,7 +107,7 @@ type wedge struct {
 	width          float64
 	style          patchStyle
 	label          string
-	plain          bool
+	mode           textMode
 	z              float64
 }
 
@@ -239,7 +234,7 @@ func (w *wedge) legendEntry() *legendEntry {
 	if w.label == "" || w.label[0] == '_' {
 		return nil
 	}
-	return &legendEntry{label: w.label, patch: &w.style, plain: w.plain}
+	return &legendEntry{label: w.label, patch: &w.style, mode: w.mode}
 }
 
 // pieFractions checks the sizes as matplotlib does — negatives first, then
@@ -371,7 +366,7 @@ func (a *Axes) Pie(x any, opts ...Option) error {
 		w := &wedge{
 			cx: p.center[0] + float64(explode[i]*math.Cos(thetam)), cy: p.center[1] + float64(explode[i]*math.Sin(thetam)),
 			r: radius, theta1: 360 * math.Min(theta1, theta2), theta2: 360 * math.Max(theta1, theta2),
-			width: p.wedgeWidth, style: st, label: labels[i], plain: p.plain, z: z,
+			width: p.wedgeWidth, style: st, label: labels[i], mode: p.textMode, z: z,
 		}
 		wedges[i] = w
 		a.add(w)
@@ -466,7 +461,7 @@ func (a *Axes) pieLabel(ws []*wedge, labels []string, distance float64, outer, r
 				rot += 180
 			}
 		}
-		t := &textArt{s: labels[i], x: xt, y: yt, size: size, ha: ha, va: va, rot: rot, color: color, z: 3, plain: p.plain}
+		t := &textArt{s: labels[i], x: xt, y: yt, size: size, ha: ha, va: va, rot: rot, color: color, z: 3, mode: p.textMode}
 		if group == nil {
 			a.add(t)
 			continue

@@ -34,7 +34,7 @@ type Axes struct {
 	noFrame   bool // neither patch nor spines: matplotlib's frame_on=False (Pie)
 	artists   []artist
 	lims      []lim // artists[i].limits(), computed once when added
-	title     string
+	title     labelText
 	legend    *legendSpec
 	gridX     bool
 	gridY     bool
@@ -58,8 +58,9 @@ type axis struct {
 	log        bool
 	vmin, vmax float64
 	auto       bool // autoscale on: limits follow the data
-	label      string
-	right      bool // ticks and label on the right (y) or top (x)
+	label      labelText
+	tickMode   textMode // how the caller's tick labels are read
+	right      bool     // ticks and label on the right (y) or top (x)
 	owners     []*Axes
 	ticks      []float64 // manual ticks, or nil
 	tickLabels []string
@@ -99,14 +100,14 @@ func (a *Axes) TwinX() *Axes {
 	return t
 }
 
-// SetTitle sets the title above the Axes.
-func (a *Axes) SetTitle(s string) { a.title = s }
+// SetTitle sets the title above the Axes. Options: PlainText, MathText.
+func (a *Axes) SetTitle(s string, opts ...Option) { a.title = newLabel(s, opts) }
 
-// SetXLabel sets the label of the x axis.
-func (a *Axes) SetXLabel(s string) { a.x.label = s }
+// SetXLabel sets the label of the x axis. Options: PlainText, MathText.
+func (a *Axes) SetXLabel(s string, opts ...Option) { a.x.label = newLabel(s, opts) }
 
-// SetYLabel sets the label of the y axis.
-func (a *Axes) SetYLabel(s string) { a.y.label = s }
+// SetYLabel sets the label of the y axis. Options: PlainText, MathText.
+func (a *Axes) SetYLabel(s string, opts ...Option) { a.y.label = newLabel(s, opts) }
 
 // SetXLim fixes the x view limits and turns x autoscaling off. Equal limits
 // are widened, as matplotlib widens them.
@@ -134,6 +135,20 @@ func (a *Axes) SetXTicks(locs []float64, labels ...string) { a.x.setTicksTo(locs
 // SetYTicks fixes the y tick locations and, when labels are given, their
 // labels.
 func (a *Axes) SetYTicks(locs []float64, labels ...string) { a.y.setTicksTo(locs, labels) }
+
+// SetXTickLabels fixes the x tick locations and their labels, as
+// matplotlib's ax.set_xticks(locs, labels, **text_kwargs): category names
+// under bars, for one. Options: PlainText, MathText.
+func (a *Axes) SetXTickLabels(locs []float64, labels []string, opts ...Option) {
+	a.x.setTicksTo(locs, labels)
+	a.x.tickMode = collect(opts).textMode
+}
+
+// SetYTickLabels is SetXTickLabels for the y axis.
+func (a *Axes) SetYTickLabels(locs []float64, labels []string, opts ...Option) {
+	a.y.setTicksTo(locs, labels)
+	a.y.tickMode = collect(opts).textMode
+}
 
 // Grid turns the major grid lines of both axes on or off.
 func (a *Axes) Grid(on bool) { a.gridX, a.gridY = on, on }

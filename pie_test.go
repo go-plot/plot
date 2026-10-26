@@ -429,10 +429,10 @@ func TestPieEdgeCases(t *testing.T) {
 	if e := a.artists[0].legendEntry(); e != nil {
 		t.Error("an _ label in the legend")
 	}
-	if e := a.artists[1].legendEntry(); e == nil || !e.plain {
+	if e := a.artists[1].legendEntry(); e == nil || e.mode != modePlain {
 		t.Errorf("legend entry %+v", e)
 	}
-	if ts := pieTexts(a); !ts[1].plain {
+	if ts := pieTexts(a); ts[1].mode != modePlain {
 		t.Error("PlainText did not reach the label")
 	}
 	// Rotated labels left of x = 0 turn by another half turn, to read
