@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-plot/plot/colors"
 	"github.com/go-plot/plot/render"
+	"github.com/go-plot/plot/text"
 )
 
 // box is a rectangle in pixels, y down.
@@ -26,6 +27,7 @@ type textSpec struct {
 	Rot    float64
 	Anchor bool
 	Color  colors.RGBA
+	Plain  bool // no TeX: set through text.PlainRenderer when the renderer is one
 }
 
 // placedText is a laid-out string: its glyph outlines in figure pixels and
@@ -61,7 +63,12 @@ func (f *Figure) layoutText(t textSpec) placedText {
 	for i, s := range lines {
 		var l line
 		if s != "" {
-			lay := f.Text.Layout(s, t.Size)
+			var lay text.Layout
+			if pr, ok := f.Text.(text.PlainRenderer); ok && t.Plain {
+				lay = pr.LayoutPlain(s, t.Size)
+			} else {
+				lay = f.Text.Layout(s, t.Size)
+			}
 			l = line{w: lay.Width, a: lay.Ascent, d: lay.Descent, path: lay.Path}
 		}
 		l.a = math.Max(l.a, minA) + gap/2

@@ -165,7 +165,7 @@ func tickInfos(ts []ticker.Tick, major bool) []tickInfo {
 
 // drawSpines draws the four lines around the Axes box (z-order 2.5).
 func (a *Axes) drawSpines(r render.Renderer) {
-	if a.colorbar != nil {
+	if a.colorbar != nil || a.noFrame {
 		return
 	}
 	st := render.Style{Stroke: black, Width: a.fig.pt(spineWidth), Cap: render.CapProjecting, Snap: true}

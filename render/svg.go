@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"hash/fnv"
 	"image"
 	"image/draw"
 	"image/png"
@@ -22,12 +23,19 @@ import (
 // pixels at the figure's dpi, in a viewBox whose physical size is given in
 // points, as matplotlib does; text arrives here already turned into glyph
 // outlines, so the document needs no font.
+//
+// The document is meant to be inlined in an HTML page served under a strict
+// Content-Security-Policy: it holds no script, no event attribute, no
+// external reference and no style attribute (paint is given in presentation
+// attributes, which style-src does not govern), and no text that a parser
+// could read as markup, since text is outlines. The one data: URI is the
+// PNG of an image (Imshow), which an img-src without data: blocks.
 type SVG struct {
 	w, h   int
 	dpi    float64
 	body   bytes.Buffer
 	defs   bytes.Buffer
-	clipN  int
+	clips  map[string]bool // clip ids already defined
 	scratc []byte
 }
 
@@ -44,18 +52,36 @@ func (s *SVG) BeginGroup(id string) { fmt.Fprintf(&s.body, "<g id=%q>\n", id) }
 func (s *SVG) EndGroup() { s.body.WriteString("</g>\n") }
 
 // PushClip implements Renderer.
+//
+// A clip's id is derived from its rectangle, not from a counter. Two
+// figures inlined in one HTML page share one id space, and url(#c1) in the
+// second resolves to the first document's c1: with counters, the second
+// figure was clipped to the first one's box. An id that names its geometry
+// makes that harmless — a clash means the same rectangle — and one
+// document defines each rectangle once.
 func (s *SVG) PushClip(x, y, w, h float64) {
-	s.clipN++
-	id := "c" + strconv.Itoa(s.clipN)
-	s.defs.WriteString(`<clipPath id="` + id + `"><rect x="`)
-	s.defs.Write(num(nil, x))
-	s.defs.WriteString(`" y="`)
-	s.defs.Write(num(nil, y))
-	s.defs.WriteString(`" width="`)
-	s.defs.Write(num(nil, w))
-	s.defs.WriteString(`" height="`)
-	s.defs.Write(num(nil, h))
-	s.defs.WriteString("\"/></clipPath>\n")
+	var rect []byte
+	rect = append(rect, `<rect x="`...)
+	rect = num(rect, x)
+	rect = append(rect, `" y="`...)
+	rect = num(rect, y)
+	rect = append(rect, `" width="`...)
+	rect = num(rect, w)
+	rect = append(rect, `" height="`...)
+	rect = num(rect, h)
+	rect = append(rect, `"/>`...)
+	hash := fnv.New64a()
+	hash.Write(rect)
+	id := "c" + strconv.FormatUint(hash.Sum64(), 36)
+	if s.clips == nil {
+		s.clips = map[string]bool{}
+	}
+	if !s.clips[id] {
+		s.clips[id] = true
+		s.defs.WriteString(`<clipPath id="` + id + `">`)
+		s.defs.Write(rect)
+		s.defs.WriteString("</clipPath>\n")
+	}
 	s.body.WriteString(`<g clip-path="url(#` + id + `)">` + "\n")
 }
 
@@ -101,44 +127,49 @@ func (s *SVG) DrawPath(p *Path, st Style) {
 	b := s.scratc[:0]
 	b = append(b, `<path d="`...)
 	b = pathData(b, p)
-	b = append(b, `" style="`...)
+	b = append(b, '"')
 	if st.Fill.A > 0 {
-		b = append(b, "fill:"+colour(st.Fill)...)
+		b = append(b, ` fill="`+colour(st.Fill)+`"`...)
 		if st.Fill.A < 1 {
-			b = append(b, ";fill-opacity:"...)
+			b = append(b, ` fill-opacity="`...)
 			b = num(b, st.Fill.A)
+			b = append(b, '"')
 		}
 		if st.EvenOdd {
-			b = append(b, ";fill-rule:evenodd"...)
+			b = append(b, ` fill-rule="evenodd"`...)
 		}
 	} else {
-		b = append(b, "fill:none"...)
+		b = append(b, ` fill="none"`...)
 	}
 	if st.Width > 0 && st.Stroke.A > 0 {
-		b = append(b, ";stroke:"+colour(st.Stroke)...)
+		b = append(b, ` stroke="`+colour(st.Stroke)+`"`...)
 		if st.Stroke.A < 1 {
-			b = append(b, ";stroke-opacity:"...)
+			b = append(b, ` stroke-opacity="`...)
 			b = num(b, st.Stroke.A)
+			b = append(b, '"')
 		}
-		b = append(b, ";stroke-width:"...)
+		b = append(b, ` stroke-width="`...)
 		b = num(b, st.Width)
-		b = append(b, [...]string{";stroke-linecap:butt", ";stroke-linecap:round", ";stroke-linecap:square"}[st.Cap]...)
-		b = append(b, [...]string{";stroke-linejoin:miter", ";stroke-linejoin:round", ";stroke-linejoin:bevel"}[st.Join]...)
+		b = append(b, '"')
+		b = append(b, [...]string{` stroke-linecap="butt"`, ` stroke-linecap="round"`, ` stroke-linecap="square"`}[st.Cap]...)
+		b = append(b, [...]string{` stroke-linejoin="miter"`, ` stroke-linejoin="round"`, ` stroke-linejoin="bevel"`}[st.Join]...)
 		if len(st.Dash) > 0 {
-			b = append(b, ";stroke-dasharray:"...)
+			b = append(b, ` stroke-dasharray="`...)
 			for i, d := range st.Dash {
 				if i > 0 {
 					b = append(b, ',')
 				}
 				b = num(b, d)
 			}
+			b = append(b, '"')
 			if st.Offset != 0 {
-				b = append(b, ";stroke-dashoffset:"...)
+				b = append(b, ` stroke-dashoffset="`...)
 				b = num(b, st.Offset)
+				b = append(b, '"')
 			}
 		}
 	}
-	b = append(b, "\"/>\n"...)
+	b = append(b, "/>\n"...)
 	s.body.Write(b)
 	s.scratc = b
 }
@@ -164,7 +195,7 @@ func (s *SVG) DrawImage(im Image) {
 	b = num(b, im.W)
 	b = append(b, `" height="`...)
 	b = num(b, im.H)
-	b = append(b, `" preserveAspectRatio="none" style="image-rendering:pixelated;image-rendering:optimizeSpeed" xlink:href="data:image/png;base64,`...)
+	b = append(b, `" preserveAspectRatio="none" image-rendering="pixelated" xlink:href="data:image/png;base64,`...)
 	b = base64.StdEncoding.AppendEncode(b, buf.Bytes())
 	b = append(b, "\"/>\n"...)
 	s.body.Write(b)

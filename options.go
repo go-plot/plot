@@ -59,6 +59,28 @@ type props struct {
 	arrow      bool
 	xerr, yerr []float64
 	loc        string
+
+	// Pie
+	labels           []string
+	autopct          func(pct float64) string
+	pctDistance      float64
+	setPctDistance   bool
+	labelDistance    float64
+	setLabelDistance bool
+	startAngle       float64
+	clockwise        bool
+	explode          []float64
+	radius           float64
+	setRadius        bool
+	center           [2]float64
+	wedgeWidth       float64
+	rotateLabels     bool
+	noNormalize      bool
+	textColor        colors.RGBA
+	setTextColor     bool
+	plain            bool
+	spreadLabels     bool
+	donut            bool
 }
 
 func collect(opts []Option) props {

@@ -19,6 +19,7 @@ type legendEntry struct {
 	line    *lineStyle
 	patch   *patchStyle
 	scatter *scatterArt
+	plain   bool // the label is set without TeX
 }
 
 type legendSpec struct {
@@ -90,7 +91,7 @@ func (a *Axes) drawLegend(r render.Renderer) {
 	textW := 0.0
 	height := 0.0
 	for i := range rows {
-		pt := f.layoutText(textSpec{S: rows[i].e.label, Size: F, HA: "left", VA: "baseline"})
+		pt := f.layoutText(textSpec{S: rows[i].e.label, Size: F, HA: "left", VA: "baseline", Plain: rows[i].e.plain})
 		rows[i].txt = pt
 		rows[i].asc = math.Max(hh, -pt.bbox.y0)
 		rows[i].de = math.Max(0, pt.bbox.y1)
@@ -202,8 +203,17 @@ func (a *Axes) legendObstacles() (verts []render.Pt, paths [][]render.Pt, boxes 
 				verts = append(verts, render.Pt{X: x, Y: y})
 			}
 		case *textArt:
-			x, y := a.toPx(v.x, v.y)
-			boxes = append(boxes, a.fig.layoutText(textSpec{S: v.s, X: x, Y: y, Size: a.fig.pt(v.size), HA: v.ha, VA: v.va, Rot: v.rot}).bbox)
+			boxes = append(boxes, a.fig.layoutText(v.spec(a)).bbox)
+		case *wedge:
+			// matplotlib counts a non-rectangular patch as a line: its
+			// vertices, and its path crossing the legend box.
+			pts := v.pixels(a)
+			verts = append(verts, pts...)
+			paths = append(paths, pts)
+		case *pieLabels:
+			for _, t := range v.texts {
+				boxes = append(boxes, a.fig.layoutText(t.spec(a)).bbox)
+			}
 		}
 	}
 	return verts, paths, boxes

@@ -23,6 +23,7 @@ type textArt struct {
 	z      float64
 	arrow  bool
 	ax, ay float64 // the annotated point
+	plain  bool    // no TeX
 }
 
 func (t *textArt) zorder() float64           { return t.z }
@@ -30,10 +31,15 @@ func (t *textArt) limits() lim               { return emptyLim() }
 func (t *textArt) sticky() (x, y []float64)  { return nil, nil }
 func (t *textArt) legendEntry() *legendEntry { return nil }
 
+// spec is the text placed in figure pixels.
+func (t *textArt) spec(a *Axes) textSpec {
+	x, y := a.toPx(t.x, t.y)
+	return textSpec{S: t.s, X: x, Y: y, Size: a.fig.pt(t.size), HA: t.ha, VA: t.va, Rot: t.rot, Color: t.color, Plain: t.plain}
+}
+
 func (t *textArt) draw(a *Axes, r render.Renderer) {
 	f := a.fig
-	x, y := a.toPx(t.x, t.y)
-	b := f.drawText(r, textSpec{S: t.s, X: x, Y: y, Size: f.pt(t.size), HA: t.ha, VA: t.va, Rot: t.rot, Color: t.color})
+	b := f.drawText(r, t.spec(a))
 	if !t.arrow {
 		return
 	}

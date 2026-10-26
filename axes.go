@@ -31,6 +31,7 @@ type Axes struct {
 	x, y      *axis
 	xHidden   bool // a twin's x axis is drawn by its parent
 	frameOff  bool // patch (background) not drawn: twins
+	noFrame   bool // neither patch nor spines: matplotlib's frame_on=False (Pie)
 	artists   []artist
 	lims      []lim // artists[i].limits(), computed once when added
 	title     string
@@ -473,7 +474,7 @@ type artist interface {
 // matplotlib), then the title and legend.
 func (a *Axes) draw(r render.Renderer, n int) {
 	r.BeginGroup("axes_" + strconv.Itoa(n))
-	if !a.frameOff {
+	if !a.frameOff && !a.noFrame {
 		var bg render.Path
 		bg.Rect(a.px.x0, a.px.y0, a.px.x1-a.px.x0, a.px.y1-a.px.y0)
 		r.DrawPath(&bg, render.Style{Fill: a.Facecolor, Snap: true})

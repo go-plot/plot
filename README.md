@@ -65,14 +65,60 @@ any dtype. A notebook kernel calls `fig.Display()`, which returns the figure as
 | | |
 |---|---|
 | figures | `NewFigure`, `Subplots(rows, cols)`, `AddAxes`, size in inches and dpi, `TightLayout` |
-| plots | `Plot` (lines, 17 markers, 4 line styles), `Scatter` (size and colour per point, colormaps), `Bar`, `Barh`, `Hist`, `FillBetween`, `ErrorBar`, `Imshow` (2-D data or RGB(A)), `Contour`, `Contourf`, `Axhline`, `Axvline`, `Text`, `Annotate` |
+| plots | `Plot` (lines, 17 markers, 4 line styles), `Scatter` (size and colour per point, colormaps), `Bar`, `Barh`, `Hist`, `FillBetween`, `ErrorBar`, `Imshow` (2-D data or RGB(A)), `Contour`, `Contourf`, `Pie`, `Donut`, `Axhline`, `Axvline`, `Text`, `Annotate` |
 | axes | titles, labels, `Legend` (with `"best"`), `Grid`, `SetXLim`/`SetYLim`, linear and log scales, `TwinX`, manual ticks, aspect |
-| colour | matplotlib's named colours, tab10 cycle, viridis, plasma, inferno, magma, cividis, gray, coolwarm, RdBu (and `_r`), `Colorbar`, `LogNorm` |
-| output | `SaveSVG`, `SavePNG`, `Display` |
+| colour | matplotlib's named colours, tab10 cycle, `colors.Tableau10`, viridis, plasma, inferno, magma, cividis, gray, coolwarm, RdBu (and `_r`), `Colorbar`, `LogNorm` |
+| output | `SaveSVG` (safe to inline under a strict CSP), `SavePNG`, `Display` |
 
-Not yet: symlog/date axes, `constrained_layout`, boxplot/pie/violin, hatching, windows
+Not yet: symlog/date axes, `constrained_layout`, boxplot/violin, hatching, windows
 (go-widgets/window), PDF. The full list, and every place where go-plot differs
 from matplotlib, is in [docs/design.md](docs/design.md).
+
+## Pie and donut charts
+
+```go
+fig, axs := plot.Subplots(1, 1, plot.FigSize(5, 5))
+ax := axs[0][0]
+err := ax.Pie([]float64{42, 27, 18, 13},
+	plot.Labels("Salaries", "Rent", "Travel", "Other"),
+	plot.AutoPct("%1.1f%%"), // fmt verbs: "33.3%"
+	plot.PlainText())        // labels from data: no TeX, "$" is a dollar
+// ax.Donut(values, 0.35, ...) draws a ring, percentages mid-ring.
+```
+
+`Pie` is matplotlib's `ax.pie`, judged against it: every wedge path vertex by
+vertex, every label's text, position and alignment, the Axes box and limits on ten
+cases, the inputs it refuses, and the pixels (≥ 99% agree with matplotlib's own
+PNG). Options: `Labels`, `AutoPct`/`AutoPctFunc`, `PctDistance`, `LabelDistance`,
+`StartAngle`, `CounterClock`, `Explode`, `Radius`, `Center`, `WedgeWidth`,
+`RotateLabels`, `Normalize`, `Colors`, `EdgeColor`, `TextColor`, `FontSize`. Two
+go-plot additions: `PlainText` (no TeX in data-derived labels) and `SpreadLabels`
+(labels of thin wedges moved apart, with leader lines; matplotlib lets them
+overlap).
+
+- Negative, NaN or infinite sizes, or sizes that are all zero, return
+  `ErrPieNegative`, `ErrPieNonFinite` or `ErrPieZero`. Nothing is drawn, as
+  matplotlib raises. A zero size is a wedge of no width.
+- The angles are matplotlib's: from 3 o'clock, counter-clockwise.
+  `StartAngle(90), CounterClock(false)` gives go-widgets/toolkit's layout (12
+  o'clock, clockwise).
+- The colours are matplotlib's tab10. `plot.Colors(colors.Tableau10...)` gives the
+  toolkit's palette.
+
+The SVG has no script, no event attribute, no style attribute (paint is in
+presentation attributes) and no external reference. Text is glyph outlines, so a
+label can never become markup. Clip ids are derived from their rectangle, so
+several figures can be inlined in one page. The one `data:` URI is an `Imshow`
+image.
+
+### go-plot or go-widgets/toolkit?
+
+**go-plot** draws figures for documents: SVG and PNG for reports, notebooks and
+PDFs, vector, labelled, with percentages and legends, laid out as matplotlib lays
+them out. **[go-widgets/toolkit](https://github.com/go-widgets/toolkit)**'s
+`PieChart`, `BarChart`, `LineChart` … are interactive widgets: painted to pixels or
+terminal cells in a live UI, with hover through MVVM, and no labels. Use go-plot
+for something you save or send, and the toolkit for something a user points at.
 
 ## Compared with matplotlib
 

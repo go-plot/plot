@@ -1,5 +1,6 @@
-# Times matplotlib and go-plot on the same two figures, interleaved: a line
-# plot of a million points and a 1000 x 1000 imshow, each to PNG and SVG.
+# Times matplotlib and go-plot on the same three figures, interleaved: a line
+# plot of a million points, a 1000 x 1000 imshow and a twelve-wedge labelled
+# pie, each to PNG and SVG.
 # Each run is a fresh process for both (so neither keeps a warm cache the
 # other lacks), the data are built before the clock starts, and the clock
 # covers building the figure and writing the file to memory. Reports medians.
@@ -12,7 +13,7 @@ import subprocess
 import sys
 
 RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 7
-CASES = ["line_png", "line_svg", "imshow_png", "imshow_svg"]
+CASES = ["line_png", "line_svg", "imshow_png", "imshow_svg", "pie_png", "pie_svg"]
 
 MPL = r'''
 import io, json, sys, time
@@ -39,6 +40,10 @@ t = time.perf_counter()
 fig, ax = plt.subplots()
 if case.startswith("line"):
     ax.plot(x, y)
+elif case.startswith("pie"):
+    ax.pie([31, 22, 17, 9, 6, 4, 3, 3, 2, 1.5, 1, 0.5],
+           labels=["Salaries", "Rent", "Travel", "IT", "Training", "Events", "Fees",
+                   "Supplies", "Post", "Phone", "Bank", "Misc"], autopct="%1.1f%%")
 else:
     ax.imshow(img)
 fig.savefig(buf, format=case.split("_")[1])

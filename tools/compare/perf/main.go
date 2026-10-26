@@ -18,8 +18,13 @@ import (
 	"github.com/go-plot/plot"
 )
 
+var (
+	pieValues = []float64{31, 22, 17, 9, 6, 4, 3, 3, 2, 1.5, 1, 0.5}
+	pieLabels = []string{"Salaries", "Rent", "Travel", "IT", "Training", "Events", "Fees", "Supplies", "Post", "Phone", "Bank", "Misc"}
+)
+
 func main() {
-	which := flag.String("case", "line_png", "line_png, line_svg, imshow_png or imshow_svg")
+	which := flag.String("case", "line_png", "line_png, line_svg, imshow_png, imshow_svg, pie_png or pie_svg")
 	write := flag.String("write", "", "also write the file here")
 	flag.Parse()
 	// The same deterministic data as perf.py.
@@ -46,11 +51,16 @@ func main() {
 	switch *which {
 	case "line_png", "line_svg":
 		axs[0][0].Plot(x, y)
+	case "pie_png", "pie_svg":
+		// The same pie as perf.py: twelve labelled wedges with percentages.
+		if err := axs[0][0].Pie(pieValues, plot.Labels(pieLabels...), plot.AutoPct("%1.1f%%")); err != nil {
+			panic(err)
+		}
 	default:
 		axs[0][0].Imshow(img)
 	}
 	var err error
-	if *which == "line_png" || *which == "imshow_png" {
+	if *which == "line_png" || *which == "imshow_png" || *which == "pie_png" {
 		err = fig.SavePNG(&buf)
 	} else {
 		err = fig.SaveSVG(&buf)

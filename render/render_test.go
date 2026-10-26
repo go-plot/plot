@@ -179,10 +179,11 @@ func TestSVG(t *testing.T) {
 	doc := out.String()
 	for _, want := range []string{
 		`width="100pt" height="50pt" viewBox="0 0 100 50"`,
-		`<clipPath id="c1"><rect x="0" y="0" width="50" height="50"/></clipPath>`,
+		`"><rect x="0" y="0" width="50" height="50"/></clipPath>`,
 		`d="M0 0 Q1 1 2 2 C1 1 2 2 3 3 z"`,
-		"fill:#ff0000;fill-opacity:0.5;fill-rule:evenodd;stroke:#0000ff;stroke-opacity:0.25;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:1,2;stroke-dashoffset:3",
-		"fill:none;stroke:#000000",
+		`fill="#ff0000" fill-opacity="0.5" fill-rule="evenodd" stroke="#0000ff" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="bevel" stroke-dasharray="1,2" stroke-dashoffset="3"`,
+		`fill="none" stroke="#000000"`,
+		`image-rendering="pixelated"`,
 		`<image x="1" y="1" width="2" height="2"`,
 		`<g id="g1">`,
 	} {
@@ -192,6 +193,48 @@ func TestSVG(t *testing.T) {
 	}
 	if strings.Count(doc, "<path") != 2 {
 		t.Error("empty path written")
+	}
+	if strings.Contains(doc, "style=") {
+		t.Error("a style attribute: a strict CSP drops it when the SVG is inlined")
+	}
+}
+
+// TestSVGClipIDs: a clip's id names its rectangle, so the same rectangle is
+// defined once, a different one gets a different id, and the id does not
+// depend on how many clips came before (two figures inlined in one page must
+// not resolve each other's url(#…) to a different box).
+func TestSVGClipIDs(t *testing.T) {
+	write := func(rects ...[4]float64) string {
+		s := NewSVG(100, 100, 72)
+		for _, r := range rects {
+			s.PushClip(r[0], r[1], r[2], r[3])
+			s.PopClip()
+		}
+		var out bytes.Buffer
+		if _, err := s.WriteTo(&out); err != nil {
+			t.Fatal(err)
+		}
+		return out.String()
+	}
+	a, b := [4]float64{0, 0, 50, 50}, [4]float64{10, 10, 20, 20}
+	one := write(a, a, b)
+	if n := strings.Count(one, "<clipPath"); n != 2 {
+		t.Errorf("%d clipPath definitions for two distinct rectangles:\n%s", n, one)
+	}
+	other := write(b)
+	idOf := func(doc string, at int) string {
+		i := strings.Index(doc, `<clipPath id="`)
+		for ; at > 0; at-- {
+			i += 1 + strings.Index(doc[i+1:], `<clipPath id="`)
+		}
+		rest := doc[i+len(`<clipPath id="`):]
+		return rest[:strings.IndexByte(rest, '"')]
+	}
+	if idOf(one, 1) != idOf(other, 0) {
+		t.Errorf("the same rectangle got ids %q and %q in two documents", idOf(one, 1), idOf(other, 0))
+	}
+	if idOf(one, 0) == idOf(one, 1) {
+		t.Error("two rectangles share an id")
 	}
 	// No clip, no defs.
 	var bare bytes.Buffer
