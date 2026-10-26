@@ -58,6 +58,16 @@ var Cycle = []string{
 	"#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
 }
 
+// Tableau10 is Tableau's 2016 "Tableau 10" palette, the one
+// go-widgets/toolkit's PieChart and charts use (their first six colours).
+// matplotlib's tab10 (Cycle) is the earlier Tableau set. Pass it to a plot
+// to match the toolkit: plot.Colors(colors.Tableau10...). d3's
+// schemeTableau10 differs from these by one unit in four channels.
+var Tableau10 = []string{
+	"#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
+	"#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac",
+}
+
 // CycleColor returns colour i of the default cycle, wrapping around.
 func CycleColor(i int) RGBA {
 	c, _ := parseHex(Cycle[((i%len(Cycle))+len(Cycle))%len(Cycle)])

@@ -205,14 +205,32 @@ overlap, so a one-pixel slip of the data does not pass.
   display space with a pad. Usually the same place; not always.
 - **Annotate** draws `arrowstyle="->"` only, shrunk 2 points at both ends.
 - **SVG** carries the same geometry but not matplotlib's document structure,
-  ids or metadata.
+  ids or metadata. Paint is in presentation attributes, not `style=`, so the
+  document can be inlined under a Content-Security-Policy that forbids inline
+  styles. Clip ids are a hash of their rectangle, not a counter, so that two
+  figures inlined in one page cannot clip each other.
+- **Pie** is `ax.pie` with its defaults, checked against matplotlib 3.11.2 by
+  `tools/gen_pie.py` → `testdata/pie.json`: wedge paths vertex for vertex
+  (Path.arc's Bézier construction), label and percentage positions,
+  alignment and rotation, the Axes box and limits, and the refusals. The
+  pixel judge needs ≥ 99% of the pixels in the same colour class as matplotlib's
+  PNG. A different pie is the negative control. Differences:
+  - The data errors are returned, not raised, and a sum that overflows is taken
+    after scaling, where matplotlib draws every wedge empty.
+  - `AutoPct` takes Go format verbs.
+  - There is no `shadow`, `hatch` or `frame=True`.
+  - `labeldistance=None` is `LabelDistance(NaN)`.
+  - Empty labels make no text object.
+  - `PlainText`, `SpreadLabels` and `Donut` are go-plot's own.
+- **Text in `\$`**: an escaped dollar outside math is a dollar. v0.1 drew the
+  backslash too.
 
 ## Not in v0
 
 module-level `pyplot`-style functions (by design, see above); suptitle and
 `TightLayout` with explicit pads or `rect`; symlog, logit and date axes; minor ticks on linear axes (off by default in
 matplotlib too) and `AutoMinorLocator`; `constrained_layout`;
-`subplots` sharing; hatching; boxplot, violin, pie, quiver, stem, step,
+`subplots` sharing; hatching; boxplot, violin, quiver, stem, step,
 `pcolormesh`, 3-D; colorbar `extend` and discrete norms; image interpolation
 other than nearest; `Text` bounding boxes; legend columns, titles and
 `bbox_to_anchor`; native and browser windows (go-widgets/window); PDF output.

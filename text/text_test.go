@@ -55,6 +55,17 @@ func TestLayoutPlain(t *testing.T) {
 	if NewDefault() != d {
 		t.Error("NewDefault is not shared")
 	}
+	// An escaped dollar is a dollar: the backslash leaves no ink.
+	esc, lit := d.Layout(`cost \$5`, 20), d.LayoutPlain("cost $5", 20)
+	if esc.Width != lit.Width || len(esc.Path.Segs) != len(lit.Path.Segs) {
+		t.Errorf(`"cost \$5" is %v wide, "cost $5" plain %v`, esc.Width, lit.Width)
+	}
+	// Plain layout reads no TeX: two dollars stay two dollar glyphs.
+	var _ PlainRenderer = d
+	money := d.LayoutPlain(`$5 and $\frac{6}$`, 20)
+	if money.Width != d.setText(`$5 and $\frac{6}$`, 20, 0, 0).advance {
+		t.Errorf("plain layout typeset math: %+v", money)
+	}
 }
 
 func TestMathDefault(t *testing.T) {

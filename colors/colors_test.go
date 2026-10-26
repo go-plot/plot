@@ -128,6 +128,16 @@ func TestParseErrorsAndHelpers(t *testing.T) {
 	if CycleColor(10) != CycleColor(0) || CycleColor(-1) != CycleColor(9) {
 		t.Error("cycle wrap")
 	}
+	// go-widgets/toolkit's piePalette, byte for byte (its first six).
+	toolkit := [][3]uint8{{0x4E, 0x79, 0xA7}, {0xF2, 0x8E, 0x2B}, {0xE1, 0x57, 0x59}, {0x76, 0xB7, 0xB2}, {0x59, 0xA1, 0x4F}, {0xED, 0xC9, 0x48}}
+	for i, w := range toolkit {
+		if b := MustParse(Tableau10[i]).Bytes(); [3]uint8{b[0], b[1], b[2]} != w {
+			t.Errorf("Tableau10[%d] = %s, toolkit has %x", i, Tableau10[i], w)
+		}
+	}
+	if len(Tableau10) != 10 {
+		t.Errorf("%d Tableau colours", len(Tableau10))
+	}
 	c := MustParse("#ff800080")
 	if c.Hex() != "#ff800080" || c.WithAlpha(1).Hex() != "#ff8000" {
 		t.Errorf("hex %s", c.Hex())

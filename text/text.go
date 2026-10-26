@@ -193,17 +193,33 @@ func (d *Default) setText(s string, sizePx, x, y float64) run {
 	return r
 }
 
+// A PlainRenderer can also lay out a string as it is, with no TeX: dollar
+// signs and backslashes are characters. Text that comes from data (a
+// category name, a customer's label) goes through it, so that "$5 and $6"
+// is not typeset as math and no input reaches the TeX typesetter.
+type PlainRenderer interface {
+	Renderer
+	LayoutPlain(s string, sizePx float64) Layout
+}
+
+// LayoutPlain implements PlainRenderer.
+func (d *Default) LayoutPlain(s string, sizePx float64) Layout {
+	r := d.setText(s, sizePx, 0, 0)
+	return Layout{
+		Path:    r.path,
+		Width:   r.advance,
+		Ascent:  -r.inkTop,
+		Descent: math.Max(0, r.inkBottom),
+	}
+}
+
 // Layout implements Renderer.
 func (d *Default) Layout(s string, sizePx float64) Layout {
 	parts := splitMath(s)
 	if len(parts) == 1 && !parts[0].math {
-		r := d.setText(s, sizePx, 0, 0)
-		return Layout{
-			Path:    r.path,
-			Width:   r.advance,
-			Ascent:  -r.inkTop,
-			Descent: math.Max(0, r.inkBottom),
-		}
+		// parts[0].s, not s: "cost \$5" is "cost $5" (v0.1 drew the
+		// backslash).
+		return d.LayoutPlain(parts[0].s, sizePx)
 	}
 	out := Layout{Path: &render.Path{}}
 	pen := 0.0
