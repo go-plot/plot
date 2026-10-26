@@ -111,6 +111,32 @@ label can never become markup. Clip ids are derived from their rectangle, so
 several figures can be inlined in one page. The one `data:` URI is an `Imshow`
 image.
 
+## Text that comes from data
+
+By default, every string is read as matplotlib reads it: TeX between an even
+number of unescaped `$`. When a name comes from data (an org, a team, a user,
+"100$"), set it as it is. Either for the whole figure:
+
+```go
+fig := plot.NewFigure(plot.ParseMath(false)) // matplotlib's rcParams["text.parse_math"] = False
+```
+
+or per call, as matplotlib's `parse_math=False`:
+
+```go
+ax.SetTitle(team, plot.PlainText())
+ax.SetXLabel(unit, plot.PlainText())
+ax.SetXTickLabels(locs, projects, plot.PlainText()) // category ticks under bars
+ax.Legend(plot.PlainText())                         // every entry
+ax.Text(x, y, user, plot.PlainText())
+ax.Pie(v, plot.Labels(labs...), plot.PlainText())
+```
+
+- `MathText()` restores TeX for one call on a `ParseMath(false)` figure.
+- The tick labels go-plot writes itself (`10³` on a log axis) stay math.
+- A plain string never reaches the TeX typesetter. It is drawn as glyph
+  outlines, so `<script>` is shapes, not markup.
+
 ### go-plot or go-widgets/toolkit?
 
 **go-plot** draws figures for documents: SVG and PNG for reports, notebooks and

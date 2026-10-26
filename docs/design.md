@@ -224,6 +224,18 @@ overlap, so a one-pixel slip of the data does not pass.
   - `PlainText`, `SpreadLabels` and `Donut` are go-plot's own.
 - **Text in `\$`**: an escaped dollar outside math is a dollar. v0.1 drew the
   backslash too.
+- **parse_math** follows matplotlib's `Text._preprocess_math`:
+  - `ParseMath(false)` is `rcParams["text.parse_math"] = False`, the figure's
+    default.
+  - `PlainText()` and `MathText()` on a call are `parse_math=False` and
+    `parse_math=True` on that Text.
+  - A plain string is drawn as given, `\$` included, as matplotlib returns it
+    unchanged.
+  - One difference: the formatters' own tick labels stay math under
+    `ParseMath(false)`. They are go-plot's, not the caller's, and matplotlib
+    would show their `$\mathdefault{...}$` source.
+  - A replacement `Figure.Text` must implement `text.PlainRenderer`, or plain
+    strings go through `Layout`.
 
 ## Not in v0
 

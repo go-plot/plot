@@ -44,8 +44,9 @@ type Figure struct {
 	// SubplotParams place the grids made by Subplots; TightLayout sets them.
 	SubplotParams SubplotParams
 
-	axes    []*Axes
-	collect *[]box // while measuring: the extent of every text drawn
+	axes      []*Axes
+	collect   *[]box // while measuring: the extent of every text drawn
+	plainText bool   // ParseMath(false): callers' strings are set without TeX
 }
 
 // A FigOption configures a new Figure.

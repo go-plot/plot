@@ -19,12 +19,13 @@ type legendEntry struct {
 	line    *lineStyle
 	patch   *patchStyle
 	scatter *scatterArt
-	plain   bool // the label is set without TeX
+	mode    textMode // how the label is read, when its artist says
 }
 
 type legendSpec struct {
 	loc      string
 	fontSize float64
+	mode     textMode // PlainText or MathText given to Legend
 }
 
 // legendLocs are matplotlib's location codes 1..10 and their anchors.
@@ -46,7 +47,8 @@ func Loc(s string) Option { return func(p *props) { p.loc = s } }
 // Legend adds a legend of every labelled artist, as matplotlib's
 // ax.legend(): 10-point labels in a rounded, translucent frame.
 //
-// Options: Loc, FontSize.
+// Options: Loc, FontSize, PlainText or MathText (for every entry whose
+// artist does not say).
 func (a *Axes) Legend(opts ...Option) {
 	p := collect(opts)
 	loc := p.loc
@@ -64,7 +66,7 @@ func (a *Axes) Legend(opts ...Option) {
 	if p.fontSize > 0 {
 		fs = p.fontSize
 	}
-	a.legend = &legendSpec{loc: loc, fontSize: fs}
+	a.legend = &legendSpec{loc: loc, fontSize: fs, mode: p.textMode}
 }
 
 type legendRow struct {
@@ -91,7 +93,11 @@ func (a *Axes) drawLegend(r render.Renderer) {
 	textW := 0.0
 	height := 0.0
 	for i := range rows {
-		pt := f.layoutText(textSpec{S: rows[i].e.label, Size: F, HA: "left", VA: "baseline", Plain: rows[i].e.plain})
+		mode := rows[i].e.mode
+		if mode == modeInherit {
+			mode = a.legend.mode
+		}
+		pt := f.layoutText(textSpec{S: rows[i].e.label, Size: F, HA: "left", VA: "baseline", Plain: f.plain(mode)})
 		rows[i].txt = pt
 		rows[i].asc = math.Max(hh, -pt.bbox.y0)
 		rows[i].de = math.Max(0, pt.bbox.y1)
